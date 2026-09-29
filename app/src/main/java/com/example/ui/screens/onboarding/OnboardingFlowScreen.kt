@@ -3,6 +3,7 @@ package com.example.ui.screens.onboarding
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -303,13 +304,7 @@ fun OnboardingCarouselScreen(
                                     .padding(horizontal = 4.dp)
                                     .size(if (isActive) 22.dp else 7.dp, 7.dp)
                                     .clip(RoundedCornerShape(4.dp))
-                                    .background(
-                                        if (isActive) {
-                                            Brush.horizontalGradient(
-                                                listOf(PrepCyanSecondary, PrepBluePrimary)
-                                            )
-                                        } else Color.White.copy(alpha = 0.2f)
-                                    )
+                                    .background(if (isActive) PrepBluePrimary else Color.White.copy(alpha = 0.2f))
                             )
                         }
                     }

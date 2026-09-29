@@ -77,6 +77,7 @@ import com.example.ui.theme.PrepSurfaceVariant
 import com.example.ui.theme.PrepBlueDark
 import com.example.ui.theme.PrepBlueLight
 import com.example.ui.theme.PrepBluePrimary
+import com.example.ui.theme.PrepCyanSecondary
 import com.example.ui.theme.PrepStreakOrange
 import com.example.ui.theme.PrepSuccess
 import com.example.ui.theme.PrepWarning

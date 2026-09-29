@@ -683,7 +683,7 @@ fun LoginScreen(
                                 .fillMaxWidth()
                                 .clickable {
                                     showGoogleAccountDialog = false
-                                    viewModel.signInWithGoogle(name = "Shubh Anand", email = "nobitanobi7209@gmail.com")
+                                    viewModel?.signInWithGoogle(name = "Shubh Anand", email = "nobitanobi7209@gmail.com")
                                     onLoginSuccess()
                                 },
                             shape = RoundedCornerShape(12.dp),
@@ -732,7 +732,7 @@ fun LoginScreen(
                                 .fillMaxWidth()
                                 .clickable {
                                     showGoogleAccountDialog = false
-                                    viewModel.signInWithGoogle(name = "Scholar Student", email = "student@gmail.com")
+                                    viewModel?.signInWithGoogle(name = "Scholar Student", email = "student@gmail.com")
                                     onLoginSuccess()
                                 },
                             shape = RoundedCornerShape(12.dp),
