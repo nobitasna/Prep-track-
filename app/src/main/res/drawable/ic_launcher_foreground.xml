@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Center group within 66dp safe zone (21dp to 87dp) -->
+    <!-- Open Book Base Layer -->
+    <path
+        android:fillColor="#E3F2FD"
+        android:pathData="M30,40 C30,37 33,35 37,35 L49,35 C52,35 54,37 54,39 L54,75 C54,73 51,71 47,71 L35,71 C32,71 30,73 30,75 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,39 C54,37 56,35 59,35 L71,35 C75,35 78,37 78,40 L78,75 C78,73 76,71 73,71 L61,71 C57,71 54,73 54,75 Z" />
+    <!-- Book Spine & Pages Detail Lines -->
+    <path
+        android:fillColor="#90CAF9"
+        android:pathData="M36,44 L48,44 L48,46 L36,46 Z M36,50 L48,50 L48,52 L36,52 Z M36,56 L44,56 L44,58 L36,58 Z" />
+    <path
+        android:fillColor="#BBDEFB"
+        android:pathData="M60,44 L72,44 L72,46 L60,46 Z M60,50 L72,50 L72,52 L60,52 Z M60,56 L68,56 L68,58 L60,58 Z" />
+    <!-- Dynamic Track Upward Arrow / Milestone -->
+    <path
+        android:fillColor="#FFCA28"
+        android:pathData="M54,26 L63,38 L57,38 L57,48 L51,48 L51,38 L45,38 Z" />
+    <!-- Study Checkmark Badge -->
+    <path
+        android:fillColor="#00E676"
+        android:pathData="M68,58 C68,53.6 71.6,50 76,50 C80.4,50 84,53.6 84,58 C84,62.4 80.4,66 76,66 C71.6,66 68,62.4 68,58 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M73.5,58.5 L71.5,56.5 L70,58 L73.5,61.5 L81.5,53.5 L80,52 Z" />
+</vector>

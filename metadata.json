@@ -1,0 +1,6 @@
+{
+  "name": "PREP TRACK",
+  "description": "Universal study planner, syllabus manager, lecture tracker, focus timer, and progress analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
