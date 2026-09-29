@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PREP TRACK — Plan • Focus • Track • Achieve</title>
+  <meta name="description" content="PREP TRACK is an Android study planning and productivity app that helps students organize their syllabus, plan preparation, track progress and stay focused.">
+  <meta name="keywords" content="study planner, syllabus tracker, NEET prep, JEE prep, CBSE, pomodoro focus timer, android study app">
+  
+  <!-- Open Graph / Meta -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="PREP TRACK — Plan • Focus • Track • Achieve">
+  <meta property="og:description" content="Organize your syllabus, plan preparation, track progress and stay focused — all in one Android app.">
+  <meta property="og:image" content="./assets/logo.svg">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+  <div class="bg-grid-overlay" aria-hidden="true"></div>
+
+  <!-- ==========================================================================
+       1. NAVBAR
+       ========================================================================== -->
+  <header class="site-nav">
+    <div class="container nav-container">
+      <a href="#" class="brand-logo-link" aria-label="PREP TRACK Home">
+        <img src="./assets/logo.svg" alt="PREP TRACK Logo" class="brand-logo-img">
+        <div>
+          <span class="brand-name">PREP TRACK</span>
+          <span class="brand-tagline-subtle">PLAN • FOCUS • TRACK</span>
+        </div>
+      </a>
+
+      <!-- Desktop Nav Links -->
+      <nav aria-label="Main Navigation">
+        <ul class="nav-links">
+          <li><a href="#features" class="nav-link">Features</a></li>
+          <li><a href="#how-it-works" class="nav-link">How It Works</a></li>
+          <li><a href="#showcase" class="nav-link">App</a></li>
+          <li><a href="#goals" class="nav-link">Supported Goals</a></li>
+          <li><a href="#pricing" class="nav-link">Pricing</a></li>
+          <li><a href="#faq" class="nav-link">FAQ</a></li>
+        </ul>
+      </nav>
+
+      <!-- Right CTA -->
+      <div class="nav-cta">
+        <a href="#download" class="btn btn-primary">DOWNLOAD APP</a>
+        <button id="mobileNavToggle" class="mobile-menu-toggle" aria-label="Toggle Navigation Menu" aria-expanded="false">
+          ☰
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Nav Drawer -->
+    <div id="mobileNavDrawer" class="mobile-nav-drawer" aria-label="Mobile Navigation">
+      <ul class="nav-links">
+        <li><a href="#features" class="nav-link">Features</a></li>
+        <li><a href="#how-it-works" class="nav-link">How It Works</a></li>
+        <li><a href="#showcase" class="nav-link">App Showcase</a></li>
+        <li><a href="#goals" class="nav-link">Supported Goals</a></li>
+        <li><a href="#pricing" class="nav-link">Pricing & PRO</a></li>
+        <li><a href="#download" class="nav-link">Download APK</a></li>
+        <li><a href="#faq" class="nav-link">FAQ</a></li>
+        <li><a href="https://t.me/preptrack" target="_blank" rel="noopener noreferrer" class="nav-link" style="color: #38BDF8;">Telegram Support ↗</a></li>
+      </ul>
+      <a href="#download" class="btn btn-primary btn-block">DOWNLOAD APP (APK)</a>
+    </div>
+  </header>
+
+  <main>
+    <!-- ==========================================================================
+         2. HERO SECTION
+         ========================================================================== -->
+    <section class="hero-section">
+      <div class="container hero-grid">
+        <div class="hero-content">
+          <div class="hero-badge">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+            </svg>
+            <span>OFFICIAL ANDROID STUDY PLANNER</span>
+          </div>
+
+          <h1 class="hero-title">
+            PLAN SMARTER.<br>
+            <span>STUDY WITH PURPOSE.</span>
+          </h1>
+
+          <p class="hero-desc">
+            PREP TRACK helps you plan your preparation, organize your syllabus, track your progress and stay focused — all in one place.
+          </p>
+
+          <div class="hero-buttons">
+            <a href="#download" class="btn btn-primary btn-lg">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              <span>DOWNLOAD APP</span>
+            </a>
+            <a href="#pricing" class="btn btn-outline btn-lg">VIEW PRICING</a>
+          </div>
+
+          <div class="hero-app-info">
+            <div class="hero-info-item">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+                <line x1="12" y1="18" x2="12.01" y2="18"/>
+              </svg>
+              <span>Android 8.0+ Ready</span>
+            </div>
+            <div class="hero-info-item">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+              <span>Offline-First Core</span>
+            </div>
+            <div class="hero-info-item">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+              <span>3-Day Free Trial</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phone Mockup Preview -->
+        <div class="hero-mockup-wrapper">
+          <div class="hero-mockup-glow" aria-hidden="true"></div>
+          
+          <div class="phone-frame">
+            <div class="phone-speaker"></div>
+            <div class="phone-screen">
+              <!-- App Top Bar Inside Phone -->
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; padding-bottom:8px; border-bottom:1px solid #1E293B;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <img src="./assets/logo.svg" alt="App Icon" style="width:26px; height:26px; border-radius:6px;">
+                  <span style="font-weight:900; font-size:0.9rem; letter-spacing:0.04em; color:#fff;">PREP TRACK</span>
+                </div>
+                <div style="background:rgba(249,115,22,0.15); color:#F97316; font-size:0.75rem; font-weight:800; padding:2px 8px; border-radius:12px;">
+                  14d 🔥
+                </div>
+              </div>
+
+              <!-- Main Dashboard Card -->
+              <div style="background:#131C31; border:1px solid #223254; border-radius:16px; padding:14px; margin-bottom:12px;">
+                <div style="font-size:0.7rem; color:#38BDF8; font-weight:800; letter-spacing:0.05em;">TARGET EXAM</div>
+                <div style="font-size:1.15rem; font-weight:800; color:#fff; margin-top:2px;">NEET UG (2026)</div>
+                <div style="font-size:0.75rem; color:#94A3B8;">184 Days to Exam Day</div>
+              </div>
+
+              <!-- Fixed 2h Reference Workload Widget -->
+              <div style="background:#16223B; border:1px solid #223254; border-radius:14px; padding:12px; margin-bottom:12px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                  <span style="font-size:0.75rem; font-weight:700; color:#CBD5E1;">Daily Reference</span>
+                  <span style="font-size:0.8rem; font-weight:800; color:#38BDF8;">2h 00m</span>
+                </div>
+                <div style="background:#0F172A; height:6px; border-radius:3px; overflow:hidden;">
+                  <div style="background:#0A84FF; width:70%; height:100%;"></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:0.65rem; color:#64748B; margin-top:4px;">
+                  <span>Lecture: 60m</span>
+                  <span>Notes: 30m</span>
+                  <span>Practice: 30m</span>
+                </div>
+              </div>
+
+              <!-- Mini Focus Timer Widget -->
+              <div style="background:#131C31; border:1px solid #223254; border-radius:14px; padding:12px; display:flex; align-items:center; justify-content:space-between;">
+                <div>
+                  <div style="font-size:0.7rem; color:#94A3B8;">FOCUS TIMER</div>
+                  <div style="font-size:1.1rem; font-weight:900; color:#fff; font-family:monospace;">25:00</div>
+                </div>
+                <span style="background:#0A84FF; color:#fff; font-size:0.75rem; font-weight:700; padding:6px 14px; border-radius:8px;">START</span>
+              </div>
+
+              <!-- Visual Phone Footer -->
+              <div style="margin-top:auto; padding-top:10px; border-top:1px solid #1E293B; display:flex; justify-content:space-around; font-size:0.65rem; color:#64748B;">
+                <span style="color:#38BDF8; font-weight:700;">Dashboard</span>
+                <span>Plan</span>
+                <span>Syllabus</span>
+                <span>Focus</span>
+                <span>Analytics</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         3. WHY PREP TRACK (4 Cards)
+         ========================================================================== -->
+    <section id="why" style="background: rgba(16, 25, 45, 0.4);">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-tag">THE PROBLEM WE SOLVE</div>
+          <h2 class="section-title">Preparation Scatter is Real.</h2>
+          <p class="section-desc">
+            Your syllabus, video lectures, self-notes, problem practice, revisions and daily targets easily become scattered across notebooks and spreadsheets. PREP TRACK brings your entire journey into one structured system.
+          </p>
+        </div>
+
+        <div class="why-grid">
+          <!-- Card 1: PLAN -->
+          <div class="why-card">
+            <div class="why-icon-box">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+            </div>
+            <h3 class="why-card-title">PLAN</h3>
+            <p class="why-card-desc">Build a structured preparation plan centered around your target exam date and realistic daily reference pacing.</p>
+          </div>
+
+          <!-- Card 2: FOCUS -->
+          <div class="why-card">
+            <div class="why-icon-box">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </div>
+            <h3 class="why-card-title">FOCUS</h3>
+            <p class="why-card-desc">Turn planned work into focused sessions using an independent Pomodoro timer and distraction shields.</p>
+          </div>
+
+          <!-- Card 3: TRACK -->
+          <div class="why-card">
+            <div class="why-icon-box">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10 9 9 9 8 9"/>
+              </svg>
+            </div>
+            <h3 class="why-card-title">TRACK</h3>
+            <p class="why-card-desc">See your actual progress topic-by-topic, chapter-by-chapter, and subject-by-subject without guesswork.</p>
+          </div>
+
+          <!-- Card 4: ACHIEVE -->
+          <div class="why-card">
+            <div class="why-icon-box">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+            </div>
+            <h3 class="why-card-title">ACHIEVE</h3>
+            <p class="why-card-desc">Stay consistent toward your goal with uninterrupted daily streaks, velocity projections, and milestone tracking.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         4. FEATURES
+         ========================================================================== -->
+    <section id="features">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-tag">ENGINEERED FOR ASPIRANTS</div>
+          <h2 class="section-title">Built for Serious Study Management</h2>
+          <p class="section-desc">
+            Everything you need to structure your routine, finish your syllabus on time, and keep daily momentum.
+          </p>
+        </div>
+
+        <div class="features-grid">
+          <!-- Feature 1 -->
+          <div class="feature-card">
+            <div class="feature-icon-wrapper">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </div>
+            <h3 class="feature-title">Smart Planning</h3>
+            <p class="feature-desc">Plan your preparation around your target exam date, target year, and available time with automatic daily pacing.</p>
+          </div>
+
+          <!-- Feature 2 -->
+          <div class="feature-card">
+            <div class="feature-icon-wrapper">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            </div>
+            <h3 class="feature-title">Syllabus Tracking</h3>
+            <p class="feature-desc">Hierarchical organization of subjects, chapters, and topics with progress percentages and completed lecture checks.</p>
+          </div>
+
+          <!-- Feature 3 -->
+          <div class="feature-card">
+            <div class="feature-icon-wrapper">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </div>
+            <h3 class="feature-title">Lecture Planning</h3>
+            <p class="feature-desc">Plan lectures using a fixed reference duration and calculate real watch time based on your playback speed multiplier.</p>
+          </div>
+
+          <!-- Feature 4 -->
+          <div class="feature-card">
+            <div class="feature-icon-wrapper">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            </div>
+            <h3 class="feature-title">Daily Plan</h3>
+            <p class="feature-desc">Organize planned study into realistic daily tasks split across lecture watching, note making, and problem solving.</p>
+          </div>
+
+          <!-- Feature 5 -->
+          <div class="feature-card">
+            <div class="feature-icon-wrapper">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <h3 class="feature-title">Focus Mode</h3>
+            <p class="feature-desc">Dedicated Pomodoro study timer with preset intervals, distraction shielding, and session history logging.</p>
+          </div>
+
+          <!-- Feature 6 -->
+          <div class="feature-card">
+            <div class="feature-icon-wrapper">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            </div>
+            <h3 class="feature-title">Analytics & Stats</h3>
+            <p class="feature-desc">Visual learning analytics tracking completed reference hours, subject distribution, streaks, and projected completion date.</p>
+          </div>
+
+          <!-- Feature 7 -->
+          <div class="feature-card">
+            <div class="feature-icon-wrapper">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            </div>
+            <h3 class="feature-title">Flexible Goals</h3>
+            <p class="feature-desc">Pre-configured setups for NEET, JEE, CBSE 9–12, competitive exams, or customizable custom study blueprints.</p>
+          </div>
+
+          <!-- Feature 8 -->
+          <div class="feature-card">
+            <div class="feature-icon-wrapper">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            </div>
+            <h3 class="feature-title">Offline-First Core</h3>
+            <p class="feature-desc">Core planning, timetable generation, and tracking run completely locally on-device without requiring continuous internet.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         5. HOW IT WORKS
+         ========================================================================== -->
+    <section id="how-it-works" style="background: rgba(16, 25, 45, 0.4);">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-tag">SIMPLE 4-STEP WORKFLOW</div>
+          <h2 class="section-title">How PREP TRACK Works</h2>
+          <p class="section-desc">
+            From your first day of planning to exam day, here is how PREP TRACK guides your daily routine.
+          </p>
+        </div>
+
+        <div class="steps-grid">
+          <!-- Step 1 -->
+          <div class="step-card">
+            <span class="step-num">STEP 01</span>
+            <h3 class="step-title">Choose Your Goal</h3>
+            <p class="step-desc">Select your target exam (e.g. NEET, JEE, CBSE 12th) or create a custom goal with your target year.</p>
+          </div>
+
+          <!-- Step 2 -->
+          <div class="step-card">
+            <span class="step-num">STEP 02</span>
+            <h3 class="step-title">Configure Plan</h3>
+            <p class="step-desc">Set your preferred playback speed, notes duration, problem practice time, and weekly timetable rest days.</p>
+          </div>
+
+          <!-- Step 3 -->
+          <div class="step-card">
+            <span class="step-num">STEP 03</span>
+            <h3 class="step-title">Study & Focus</h3>
+            <p class="step-desc">Execute daily targets. Use the independent focus timer to study without notifications or distractions.</p>
+          </div>
+
+          <!-- Step 4 -->
+          <div class="step-card">
+            <span class="step-num">STEP 04</span>
+            <h3 class="step-title">Track & Achieve</h3>
+            <p class="step-desc">Check off completed lectures, maintain your streak, review learning analytics, and stay on schedule.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         6. APP SHOWCASE
+         ========================================================================== -->
+    <section id="showcase">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-tag">PRODUCT ARCHITECTURE</div>
+          <h2 class="section-title">Explore the App Interface</h2>
+          <p class="section-desc">
+            Clean, dark-mode native Android interface designed for maximum legibility and zero visual clutter.
+          </p>
+        </div>
+
+        <div class="showcase-wrapper">
+          <!-- Interactive Tabs -->
+          <div class="showcase-tabs" role="tablist">
+            <button class="showcase-tab active" data-tab="dashboard" role="tab" aria-selected="true">Dashboard</button>
+            <button class="showcase-tab" data-tab="plan" role="tab" aria-selected="false">Study Plan</button>
+            <button class="showcase-tab" data-tab="syllabus" role="tab" aria-selected="false">Syllabus</button>
+            <button class="showcase-tab" data-tab="focus" role="tab" aria-selected="false">Focus Mode</button>
+            <button class="showcase-tab" data-tab="analytics" role="tab" aria-selected="false">Analytics</button>
+          </div>
+
+          <!-- Showcase Display -->
+          <div class="showcase-display">
+            <div class="showcase-info">
+              <h3 id="showcaseTitle">Mission Dashboard</h3>
+              <p id="showcaseDesc">An intelligent control hub displaying your target exam countdown, active streak, daily workload breakdown, and quick access to study modules.</p>
+              
+              <ul class="showcase-checklist" id="showcaseList">
+                <li>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                  <span>Target Exam Countdown & Year Tracker</span>
+                </li>
+                <li>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                  <span>Daily 2-Hour Study Timetable preview</span>
+                </li>
+                <li>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                  <span>Continuous daily streak tracking</span>
+                </li>
+                <li>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                  <span>Quick-action access to Focus Timer & Syllabus</span>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Dynamic Mockup Container -->
+            <div class="showcase-screen-mockup">
+              <div class="mockup-card-view" id="showcaseMockupView">
+                <!-- Injected via app.js initially matching Dashboard -->
+                <div style="padding: 12px; background: #131C31; border-radius: 16px; margin-bottom: 12px; border: 1px solid #223254;">
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:0.75rem; color:#38BDF8; font-weight:700;">CURRENT TARGET</span>
+                    <span style="font-size:0.7rem; background:rgba(251,191,36,0.15); color:#FBBF24; padding:2px 8px; border-radius:6px; font-weight:800;">NEET 2026</span>
+                  </div>
+                  <div style="font-size:1.15rem; font-weight:800; color:#fff; margin-top:4px;">184 Days Remaining</div>
+                  <div style="font-size:0.8rem; color:#94A3B8;">Target Goal: 680+ Score Target</div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
+                  <div style="background:#16223B; padding:10px; border-radius:12px; border:1px solid #223254;">
+                    <div style="font-size:0.7rem; color:#94A3B8;">TODAY'S WORKLOAD</div>
+                    <div style="font-size:1.1rem; font-weight:800; color:#38BDF8;">2h 00m</div>
+                    <div style="font-size:0.7rem; color:#10B981;">Fixed Reference</div>
+                  </div>
+                  <div style="background:#16223B; padding:10px; border-radius:12px; border:1px solid #223254;">
+                    <div style="font-size:0.7rem; color:#94A3B8;">ACTIVE STREAK</div>
+                    <div style="font-size:1.1rem; font-weight:800; color:#F97316;">14 Days 🔥</div>
+                    <div style="font-size:0.7rem; color:#94A3B8;">Consistent</div>
+                  </div>
+                </div>
+                <div style="background:#16223B; padding:12px; border-radius:12px; border:1px solid #223254;">
+                  <div style="font-size:0.75rem; font-weight:700; color:#CBD5E1; margin-bottom:6px;">NEXT UP TODAY</div>
+                  <div style="font-size:0.85rem; font-weight:700; color:#fff;">Physics • Electrostatics</div>
+                  <div style="font-size:0.75rem; color:#38BDF8;">Lecture 04 • 45m Watch Time (at 1.25x)</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         7. SUPPORTED GOALS
+         ========================================================================== -->
+    <section id="goals" style="background: rgba(16, 25, 45, 0.4);">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-tag">COMPREHENSIVE COVERAGE</div>
+          <h2 class="section-title">Supported Academic & Exam Goals</h2>
+          <p class="section-desc">
+            Whether preparing for school board examinations, medical entrance, engineering, or national competitions, PREP TRACK organizes your path.
+          </p>
+        </div>
+
+        <div class="goals-categories-grid">
+          <!-- Category 1 -->
+          <div class="goal-category-card">
+            <h3 class="goal-cat-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+              <span>SCHOOL CLASSES</span>
+            </h3>
+            <div class="goal-tags-wrap">
+              <span class="goal-pill">Class 9</span>
+              <span class="goal-pill">Class 10</span>
+              <span class="goal-pill">Class 11</span>
+              <span class="goal-pill">Class 12</span>
+            </div>
+          </div>
+
+          <!-- Category 2 -->
+          <div class="goal-category-card">
+            <h3 class="goal-cat-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+              <span>BOARDS</span>
+            </h3>
+            <div class="goal-tags-wrap">
+              <span class="goal-pill">CBSE Board</span>
+              <span class="goal-pill">ICSE / ISC</span>
+              <span class="goal-pill">State Boards</span>
+              <span class="goal-pill">Other Boards</span>
+            </div>
+          </div>
+
+          <!-- Category 3 -->
+          <div class="goal-category-card">
+            <h3 class="goal-cat-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+              <span>MEDICAL ENTRANCE</span>
+            </h3>
+            <div class="goal-tags-wrap">
+              <span class="goal-pill" style="border-color:#38BDF8; color:#fff;">NEET UG</span>
+              <span class="goal-pill">Physics • Chemistry • Biology</span>
+            </div>
+          </div>
+
+          <!-- Category 4 -->
+          <div class="goal-category-card">
+            <h3 class="goal-cat-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              <span>ENGINEERING</span>
+            </h3>
+            <div class="goal-tags-wrap">
+              <span class="goal-pill" style="border-color:#38BDF8; color:#fff;">JEE Main</span>
+              <span class="goal-pill" style="border-color:#38BDF8; color:#fff;">JEE Advanced</span>
+              <span class="goal-pill">Physics • Chemistry • Mathematics</span>
+            </div>
+          </div>
+
+          <!-- Category 5 -->
+          <div class="goal-category-card">
+            <h3 class="goal-cat-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              <span>NATIONAL COMPETITIVE</span>
+            </h3>
+            <div class="goal-tags-wrap">
+              <span class="goal-pill">CUET</span>
+              <span class="goal-pill">NDA</span>
+              <span class="goal-pill">CDS</span>
+              <span class="goal-pill">AFCAT</span>
+              <span class="goal-pill">SSC</span>
+              <span class="goal-pill">Banking</span>
+              <span class="goal-pill">Railway</span>
+              <span class="goal-pill">UPSC</span>
+              <span class="goal-pill">State PSC</span>
+            </div>
+          </div>
+
+          <!-- Category 6 -->
+          <div class="goal-category-card">
+            <h3 class="goal-cat-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+              <span>CUSTOM STUDY GOALS</span>
+            </h3>
+            <div class="goal-tags-wrap">
+              <span class="goal-pill">Build Custom Syllabus</span>
+              <span class="goal-pill">Add Custom Subjects</span>
+              <span class="goal-pill">Set Custom Target Date</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         8. PRICING / PRO SECTION
+         ========================================================================== -->
+    <section id="pricing">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-tag">HONEST & TRANSPARENT PRICING</div>
+          <h2 class="section-title">Choose Your Plan</h2>
+          <p class="section-desc">
+            Start completely free or upgrade to PRO for uninterrupted syllabus management and lifetime tracking.
+          </p>
+        </div>
+
+        <div class="pricing-grid">
+          <!-- PLAN 1: FREE -->
+          <div class="pricing-card">
+            <span class="pricing-badge-corner pricing-badge-free">STANDARD</span>
+            <h3 class="plan-name">FREE</h3>
+            <p class="plan-desc">Start your preparation with the core PREP TRACK experience.</p>
+            
+            <div class="plan-price-box">
+              <span class="plan-price">₹0</span>
+              <span class="plan-period">/ forever</span>
+            </div>
+
+            <ul class="plan-features-list">
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>3-Day Full PRO Free Trial included</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>Core Study Planning engine</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>Syllabus breakdown for all goals</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>Focus Mode with Pomodoro timer</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>Offline-first local data storage</span>
+              </li>
+            </ul>
+
+            <a href="#download" class="btn btn-outline btn-block">START FREE</a>
+          </div>
+
+          <!-- PLAN 2: MONTHLY PRO -->
+          <div class="pricing-card">
+            <span class="pricing-badge-corner pricing-badge-monthly">MONTHLY PASS</span>
+            <h3 class="plan-name">MONTHLY</h3>
+            <p class="plan-desc">Access PREP TRACK PRO on a monthly basis.</p>
+            
+            <div class="plan-price-box">
+              <span class="plan-price">₹49</span>
+              <span class="plan-period">/ month</span>
+            </div>
+
+            <ul class="plan-features-list">
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>Full 30-Day PRO Access pass</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>No 3-day trial lock restrictions</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>Unlocks all competitive & custom syllabi</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>Complete learning analytics tracking</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>Single-Account ID license binding</span>
+              </li>
+            </ul>
+
+            <a href="https://t.me/preptrack" target="_blank" rel="noopener noreferrer" class="btn btn-telegram btn-block">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
+              <span>GET PRO</span>
+            </a>
+            <div class="pricing-manual-note">PRO activation is currently handled manually through Telegram.</div>
+          </div>
+
+          <!-- PLAN 3: LIFETIME PRO -->
+          <div class="pricing-card featured">
+            <span class="pricing-badge-corner pricing-badge-lifetime">LIFETIME ACCESS</span>
+            <h3 class="plan-name">LIFETIME</h3>
+            <p class="plan-desc">One-time purchase for lifetime PRO access.</p>
+            
+            <div class="plan-price-box">
+              <span class="plan-price" style="color:#FBBF24;">₹149</span>
+              <span class="plan-period">/ one-time</span>
+            </div>
+
+            <ul class="plan-features-list">
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <strong style="color:#fff;">Permanent Lifetime Pro License</strong>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>Zero recurring fees or renewal stress</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>Complete access to all future app updates</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>Unlocks all exams (NEET, JEE, Boards, UPSC)</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>Protected cryptographic Account ID binding</span>
+              </li>
+            </ul>
+
+            <a href="https://t.me/preptrack" target="_blank" rel="noopener noreferrer" class="btn btn-gold btn-block">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
+              <span>GET PRO (LIFETIME)</span>
+            </a>
+            <div class="pricing-manual-note">PRO activation is currently handled manually through Telegram.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         9. DOWNLOAD APK SECTION
+         ========================================================================== -->
+    <section id="download" style="background: rgba(16, 25, 45, 0.4);">
+      <div class="container">
+        <div class="download-box">
+          <div>
+            <div class="section-tag" style="background:rgba(10,132,255,0.18);">OFFICIAL ANDROID RELEASE</div>
+            <h2 class="download-title">DOWNLOAD PREP TRACK</h2>
+            <p class="download-text">
+              Take your preparation with you. Download the latest Android version of PREP TRACK and start organizing your study journey today.
+            </p>
+
+            <div class="download-buttons-group">
+              <!-- Actual GitHub Actions Hosted APK Download Link -->
+              <a href="https://github.com/nobitasna/prep-track/releases/latest/download/app-debug.apk" 
+                 download="prep-track.apk" 
+                 class="btn btn-primary btn-lg"
+                 id="directApkDownloadBtn">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                <span>DOWNLOAD APK (LATEST)</span>
+              </a>
+
+              <a href="https://t.me/preptrack" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-lg">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
+                <span>TELEGRAM SUPPORT</span>
+              </a>
+            </div>
+
+            <div class="download-meta-tags">
+              <div class="download-meta-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                <span>Target: Android 8.0 to Android 15</span>
+              </div>
+              <div class="download-meta-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                <span>Format: Android APK (.apk)</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="download-app-card">
+            <div class="download-icon-circle">
+              <img src="./assets/logo.svg" alt="PREP TRACK Icon">
+            </div>
+            <h3 style="font-size:1.25rem; font-weight:800; color:#fff; margin-bottom:4px;">PREP TRACK</h3>
+            <p style="font-size:0.85rem; color:#38BDF8; font-weight:700; margin-bottom:12px;">PLAN • FOCUS • TRACK • ACHIEVE</p>
+            <div style="font-size:0.775rem; color:#94A3B8; line-height:1.5;">
+              Direct APK release from GitHub repository: <br>
+              <code style="color:#CBD5E1; background:#1E293B; padding:2px 6px; border-radius:4px;">nobitasna/prep-track</code>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         10. FAQ SECTION (Accordion)
+         ========================================================================== -->
+    <section id="faq">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-tag">FREQUENTLY ASKED QUESTIONS</div>
+          <h2 class="section-title">Got Questions? We Have Answers.</h2>
+          <p class="section-desc">
+            Learn more about PREP TRACK, supported exams, PRO access, and offline capabilities.
+          </p>
+        </div>
+
+        <div class="faq-accordion">
+          <!-- Q1 -->
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              <span>What is PREP TRACK?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>PREP TRACK is an Android study planning and productivity app. It helps students plan their preparation timeline, organize syllabus chapters and topics, calculate realistic lecture watch times based on playback speeds, run focused study sessions with an independent Pomodoro timer, and track learning progress.</p>
+            </div>
+          </div>
+
+          <!-- Q2 -->
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              <span>Who can use PREP TRACK?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>PREP TRACK is built for high school students (Classes 9, 10, 11, 12), board examination candidates (CBSE, ICSE, State Boards), and competitive aspirants preparing for entrance exams like NEET, JEE, CUET, NDA, CDS, SSC, Banking, Railway, UPSC, or any self-paced custom study goal.</p>
+            </div>
+          </div>
+
+          <!-- Q3 -->
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              <span>Can I use PREP TRACK for NEET?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>Yes. PREP TRACK includes full pre-configured subject and chapter breakdowns for Physics, Chemistry, and Biology tailored for NEET aspirants, with lecture targets, revision tracking, and exam countdowns.</p>
+            </div>
+          </div>
+
+          <!-- Q4 -->
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              <span>Can I use it for JEE or other exams?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>Yes. It supports JEE Main and JEE Advanced with dedicated Physics, Chemistry, and Mathematics tracking, as well as exams like CUET, NDA, CDS, AFCAT, SSC, Banking, Railway, UPSC, and State PSCs.</p>
+            </div>
+          </div>
+
+          <!-- Q5 -->
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              <span>Can I use it for school studies?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>Yes. School students in Classes 9, 10, 11, and 12 can easily organize their board exams, term exams, and daily homework routines with subject-specific timetables.</p>
+            </div>
+          </div>
+
+          <!-- Q6 -->
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              <span>Where can I download the APK?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>You can download the latest official Android APK directly from the <a href="#download" style="color:#38BDF8; font-weight:700;">Download APK section</a> of this website. The APK is built via GitHub Actions and hosted securely on GitHub Releases.</p>
+            </div>
+          </div>
+
+          <!-- Q7 -->
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              <span>How do I get PRO?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>To upgrade to PRO, simply click the <strong>GET PRO</strong> button in the Pricing section or visit our official Telegram at <a href="https://t.me/preptrack" target="_blank" rel="noopener noreferrer" style="color:#38BDF8; font-weight:700;">t.me/preptrack</a>. Share your Account ID (email), complete the manual payment, and receive your unique activation key.</p>
+            </div>
+          </div>
+
+          <!-- Q8 -->
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              <span>What is the Monthly PRO price?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>Monthly PRO is priced at <strong>₹49 / month</strong>. It gives you 30 days of full Pro access with zero trial locks and full analytics.</p>
+            </div>
+          </div>
+
+          <!-- Q9 -->
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              <span>What is the Lifetime PRO price?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>Lifetime PRO is priced at <strong>₹149 one-time</strong>. It gives you permanent lifetime access with no monthly fees, no renewals, and access to all future updates.</p>
+            </div>
+          </div>
+
+          <!-- Q10 -->
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              <span>How does PRO activation work?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>When you contact the owner on Telegram, you share your Account ID (email) from the app. You will receive an official activation key (e.g. <code>PREP-MTH-...</code> for monthly or <code>PREP-PRO-...</code> for lifetime). Enter this key into the app, and Pro unlocks immediately. Each key binds cryptographically to your specific Account ID.</p>
+            </div>
+          </div>
+
+          <!-- Q11 -->
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              <span>Does PREP TRACK work offline?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>Yes. The core functionality — syllabus viewing, daily workload calculation, checkboxes, lecture notes, and the Pomodoro focus timer — is completely offline-first and runs locally on your Android device using Room database.</p>
+            </div>
+          </div>
+
+          <!-- Q12 -->
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              <span>Can I create a custom study goal?</span>
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>Yes. If your specific exam or course is not in the default list, you can choose "Custom Goal" to define your own subjects, add custom chapters, and establish your target completion timeline.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         11. CONTACT / TELEGRAM SECTION
+         ========================================================================== -->
+    <section id="contact" style="background: rgba(16, 25, 45, 0.4);">
+      <div class="container">
+        <div class="contact-card-box">
+          <div class="contact-telegram-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
+            </svg>
+          </div>
+
+          <h2 class="contact-card-title">Connect with PREP TRACK</h2>
+          <p class="contact-card-desc">
+            Have questions about PRO activation, need support, or want to provide feedback? Contact us directly on Telegram.
+          </p>
+
+          <a href="https://t.me/preptrack" target="_blank" rel="noopener noreferrer" class="btn btn-telegram btn-lg">
+            <span>OPEN TELEGRAM: @preptrack</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"/>
+              <polyline points="12 5 19 12 12 19"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ==========================================================================
+       12. FOOTER
+       ========================================================================== -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <div class="footer-logo-row">
+            <img src="./assets/logo.svg" alt="PREP TRACK Logo" style="width: 32px; height: 32px; border-radius: 8px;">
+            <span style="font-weight: 900; font-size: 1.15rem; color: #fff;">PREP TRACK</span>
+          </div>
+          <p class="footer-tagline">
+            PLAN • FOCUS • TRACK • ACHIEVE<br>
+            A dedicated study planning and productivity system built for aspirants.
+          </p>
+        </div>
+
+        <div class="footer-links-group">
+          <div>
+            <div class="footer-col-title">NAVIGATION</div>
+            <ul class="footer-links-list">
+              <li><a href="#features">Features</a></li>
+              <li><a href="#how-it-works">How It Works</a></li>
+              <li><a href="#showcase">App Showcase</a></li>
+              <li><a href="#goals">Supported Goals</a></li>
+            </ul>
+          </div>
+
+          <div>
+            <div class="footer-col-title">PRODUCT</div>
+            <ul class="footer-links-list">
+              <li><a href="#pricing">Pricing</a></li>
+              <li><a href="#download">Download APK</a></li>
+              <li><a href="#faq">FAQ</a></li>
+            </ul>
+          </div>
+
+          <div>
+            <div class="footer-col-title">SUPPORT</div>
+            <ul class="footer-links-list">
+              <li><a href="https://t.me/preptrack" target="_blank" rel="noopener noreferrer">Telegram Support ↗</a></li>
+              <li><a href="https://github.com/nobitasna/prep-track" target="_blank" rel="noopener noreferrer">GitHub Releases ↗</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>© 2026 PREP TRACK. All rights reserved.</div>
+        <div>Designed with precision for students and competitive aspirants.</div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="./js/app.js"></script>
+</body>
+</html>

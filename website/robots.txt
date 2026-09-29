@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://nobitasna.github.io/prep-track/sitemap.xml

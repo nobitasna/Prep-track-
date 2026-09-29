@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108" fill="none">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="108" y2="108" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0F172A" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+    <linearGradient id="stemGrad" x1="38" y1="76" x2="48" y2="32" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0A84FF" />
+      <stop offset="100%" stop-color="#38BDF8" />
+    </linearGradient>
+    <linearGradient id="arrowGrad" x1="33" y1="52" x2="53" y2="34" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0A84FF" />
+      <stop offset="100%" stop-color="#60A5FA" />
+    </linearGradient>
+    <linearGradient id="loopGrad" x1="43" y1="32" x2="76" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="50%" stop-color="#0A84FF" />
+      <stop offset="100%" stop-color="#FFFFFF" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Squircle Background with Subtle Border -->
+  <rect width="108" height="108" rx="26" fill="url(#bgGrad)" />
+  <rect width="106" height="106" x="1" y="1" rx="25" stroke="#38BDF8" stroke-width="1.5" stroke-opacity="0.3" />
+
+  <!-- Logo Group -->
+  <g filter="url(#glow)">
+    <!-- Upward Arrow Stem of 'P' -->
+    <path d="M38 76 L38 50 L48 50 L48 76 Z" fill="url(#stemGrad)" />
+
+    <!-- Arrowhead on Stem -->
+    <path d="M33 52 L43 34 L53 52 L45 52 L45 54 L41 54 L41 52 Z" fill="url(#arrowGrad)" />
+
+    <!-- Top Loop of 'P' -->
+    <path d="M43 32 L60 32 C68.8 32 76 39.2 76 48 C76 56.8 68.8 64 60 64 L48 64 L48 54 L60 54 C63.3 54 66 51.3 66 48 C66 44.7 63.3 42 60 42 L43 42 Z" fill="url(#loopGrad)" />
+
+    <!-- Upward secondary motion arrow at apex -->
+    <path d="M70 36 L78 28 L82 38 L77 35 L74 42 L68 40 L71 33 Z" fill="#38BDF8" />
+  </g>
+</svg>

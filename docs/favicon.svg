@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none">
+  <defs>
+    <linearGradient id="favBg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0F172A" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+    <linearGradient id="favStem" x1="22" y1="46" x2="30" y2="20" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0A84FF" />
+      <stop offset="100%" stop-color="#38BDF8" />
+    </linearGradient>
+    <linearGradient id="favLoop" x1="26" y1="18" x2="46" y2="38" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="100%" stop-color="#0A84FF" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#favBg)" />
+  <rect width="62" height="62" x="1" y="1" rx="15" stroke="#38BDF8" stroke-width="1" stroke-opacity="0.4" />
+  
+  <path d="M22 46 L22 30 L28 30 L28 46 Z" fill="url(#favStem)" />
+  <path d="M19 32 L25 21 L31 32 L26 32 L26 33 L24 33 L24 32 Z" fill="#38BDF8" />
+  <path d="M25 18 L36 18 C41.5 18 46 22.5 46 28 C46 33.5 41.5 38 36 38 L28 38 L28 32 L36 32 C38.2 32 40 30.2 40 28 C40 25.8 38.2 24 36 24 L25 24 Z" fill="url(#favLoop)" />
+  <path d="M42 21 L47 16 L50 22 L47 20 L45 25 L41 24 L43 19 Z" fill="#38BDF8" />
+</svg>
