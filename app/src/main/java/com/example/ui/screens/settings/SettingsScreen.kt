@@ -299,17 +299,21 @@ fun SettingsScreen(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(
-                                        text = if (subscriptionInfo.isPro) "Prep Track Pro"
+                                        text = if (subscriptionInfo.isLifetimePro) "Prep Track Pro (Lifetime)"
+                                        else if (subscriptionInfo.isMonthlyPro && !subscriptionInfo.isMonthlyExpired) "Prep Track Pro (Monthly)"
+                                        else if (subscriptionInfo.isMonthlyExpired) "Monthly Pro Expired"
                                         else if (subscriptionInfo.isTrialActive) "3-Day Free Trial"
                                         else "Trial Expired",
                                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                                     )
                                     Text(
-                                        text = if (subscriptionInfo.isPro) "Active • Lifetime License"
+                                        text = if (subscriptionInfo.isLifetimePro) "Active • Permanent Lifetime License"
+                                        else if (subscriptionInfo.isMonthlyPro && !subscriptionInfo.isMonthlyExpired) "Active • ${subscriptionInfo.monthlyRemainingDays} days left"
+                                        else if (subscriptionInfo.isMonthlyExpired) "1-Month pass ended • Renewal required"
                                         else if (subscriptionInfo.isTrialActive) "${subscriptionInfo.trialRemainingFormatted} remaining"
                                         else "Upgrade required to unlock features",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = if (subscriptionInfo.isPro) Color(0xFFFBBF24)
+                                        color = if (subscriptionInfo.isProActive) Color(0xFFFBBF24)
                                         else if (subscriptionInfo.isTrialActive) PrepCyanSecondary
                                         else Color(0xFFEF4444)
                                     )
@@ -318,15 +322,16 @@ fun SettingsScreen(
 
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
-                                color = if (subscriptionInfo.isPro) Color(0xFFFBBF24).copy(alpha = 0.18f)
+                                color = if (subscriptionInfo.isProActive) Color(0xFFFBBF24).copy(alpha = 0.18f)
                                 else if (subscriptionInfo.isTrialActive) PrepCyanSecondary.copy(alpha = 0.15f)
                                 else Color(0xFFEF4444).copy(alpha = 0.18f)
                             ) {
                                 Text(
-                                    text = if (subscriptionInfo.isPro) "PRO"
+                                    text = if (subscriptionInfo.isLifetimePro) "LIFETIME"
+                                    else if (subscriptionInfo.isMonthlyPro && !subscriptionInfo.isMonthlyExpired) "MONTHLY"
                                     else if (subscriptionInfo.isTrialActive) "TRIAL"
                                     else "EXPIRED",
-                                    color = if (subscriptionInfo.isPro) Color(0xFFFBBF24)
+                                    color = if (subscriptionInfo.isProActive) Color(0xFFFBBF24)
                                     else if (subscriptionInfo.isTrialActive) PrepCyanSecondary
                                     else Color(0xFFEF4444),
                                     fontWeight = FontWeight.ExtraBold,
@@ -375,10 +380,11 @@ fun SettingsScreen(
                             }
                         }
 
-                        if (subscriptionInfo.isPro) {
+                        if (subscriptionInfo.isProActive) {
                             Spacer(modifier = Modifier.height(10.dp))
+                            val passTypeText = if (subscriptionInfo.isMonthlyPro) "30-Day Monthly Pass" else "Lifetime License"
                             Text(
-                                text = "License Key: ${ActivationKeySecurity.maskKey(subscriptionInfo.activatedKey)}",
+                                text = "$passTypeText: ${ActivationKeySecurity.maskKey(subscriptionInfo.activatedKey)}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontFamily = FontFamily.Monospace,
@@ -401,7 +407,7 @@ fun SettingsScreen(
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Upgrade to Pro with Key", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                Text(if (subscriptionInfo.isMonthlyExpired) "Renew Pro with Key" else "Upgrade to Pro with Key", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                             }
                         }
                     }

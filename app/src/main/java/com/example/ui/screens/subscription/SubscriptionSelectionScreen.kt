@@ -377,7 +377,7 @@ fun SubscriptionSelectionScreen(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "Permanent Lifetime Access",
+                                    text = "Monthly & Lifetime Access",
                                     color = Color(0xFFA78BFA),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold
@@ -391,7 +391,7 @@ fun SubscriptionSelectionScreen(
                             border = BorderStroke(1.dp, PrepBluePrimary.copy(alpha = 0.5f))
                         ) {
                             Text(
-                                text = "RECOMMENDED",
+                                text = "PRO PASS",
                                 color = PrepCyanSecondary,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.ExtraBold,
@@ -403,7 +403,7 @@ fun SubscriptionSelectionScreen(
                     Spacer(modifier = Modifier.height(14.dp))
 
                     Text(
-                        text = "Unlock uninterrupted lifetime access with your unique Activation Key. Each key is tied to your account ID.",
+                        text = "Unlock uninterrupted Pro access with your activation key. Supports both 1-Month Pass and Lifetime License keys.",
                         color = Color(0xFFC7D2FE),
                         fontSize = 13.sp,
                         lineHeight = 18.sp
@@ -411,9 +411,9 @@ fun SubscriptionSelectionScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    SubscriptionFeatureItem("No 3-day time limit • Never expires", isPro = true)
+                    SubscriptionFeatureItem("Supports 1-Month (30-day) or Lifetime Pro keys", isPro = true)
                     SubscriptionFeatureItem("Unlocks all exam targets (NEET, JEE, CBSE & Custom)", isPro = true)
-                    SubscriptionFeatureItem("Device & Account ID binding protection", isPro = true)
+                    SubscriptionFeatureItem("Single-account ID binding protection", isPro = true)
                     SubscriptionFeatureItem("Instant activation with special license key", isPro = true)
 
                     Spacer(modifier = Modifier.height(18.dp))

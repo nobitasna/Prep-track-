@@ -69,6 +69,7 @@ import com.example.ui.theme.PrepCyanSecondary
 @Composable
 fun TrialExpiredBlockingDialog(
     userEmail: String,
+    isMonthlyExpired: Boolean = false,
     onActivateKey: (String) -> Pair<Boolean, String>,
     onSignOut: () -> Unit,
     onResetTrialForTesting: () -> Unit = {}
@@ -142,7 +143,7 @@ fun TrialExpiredBlockingDialog(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "3-Day Free Trial Expired",
+                        text = if (isMonthlyExpired) "Monthly Pro Pass Expired" else "3-Day Free Trial Expired",
                         style = MaterialTheme.typography.headlineSmall.copy(
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 22.sp
@@ -154,7 +155,11 @@ fun TrialExpiredBlockingDialog(
                     Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
-                        text = "Your free trial access has ended. You can no longer access syllabus, daily timetable, and tracking until you upgrade to Pro.",
+                        text = if (isMonthlyExpired) {
+                            "Your 1-month (30-day) Pro pass has expired. Enter a new monthly or lifetime activation key to renew and continue your preparation."
+                        } else {
+                            "Your free trial access has ended. You can no longer access syllabus, daily timetable, and tracking until you upgrade to Pro."
+                        },
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontSize = 13.sp,
                             lineHeight = 18.sp

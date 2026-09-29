@@ -196,10 +196,11 @@ fun PrepTrackApp(viewModel: MainViewModel = viewModel()) {
         }
     }
 
-    // Blocking Modal when trial has expired and user has not upgraded to Pro
-    if (userProfile.isLoggedIn && subscriptionInfo.isTrialExpired && !subscriptionInfo.isPro) {
+    // Blocking Modal when trial has expired or monthly pro pass has expired
+    if (userProfile.isLoggedIn && subscriptionInfo.isBlocked) {
         TrialExpiredBlockingDialog(
             userEmail = userProfile.email,
+            isMonthlyExpired = subscriptionInfo.isMonthlyExpired,
             onActivateKey = { key -> viewModel.activateProWithKey(key) },
             onSignOut = { viewModel.signOut() },
             onResetTrialForTesting = { viewModel.resetTrialForTesting() }

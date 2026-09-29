@@ -3,6 +3,7 @@ package com.example.data.repository
 import android.content.Context
 import android.content.SharedPreferences
 import com.example.data.model.ActivationResult
+import com.example.data.model.ProType
 import com.example.data.model.SubscriptionInfo
 import com.example.data.model.SubscriptionTier
 import com.example.data.security.ActivationKeySecurity
@@ -14,6 +15,7 @@ class SubscriptionRepository(context: Context) {
     private fun trialStartKey(email: String) = "trial_start_${ActivationKeySecurity.normalizeEmail(email)}"
     private fun proKey(email: String) = "pro_key_${ActivationKeySecurity.normalizeEmail(email)}"
     private fun proDateKey(email: String) = "pro_date_${ActivationKeySecurity.normalizeEmail(email)}"
+    private fun proTypeKey(email: String) = "pro_type_${ActivationKeySecurity.normalizeEmail(email)}"
 
     fun getSubscription(email: String): SubscriptionInfo {
         val cleanEmail = ActivationKeySecurity.normalizeEmail(email)
@@ -24,12 +26,20 @@ class SubscriptionRepository(context: Context) {
         } catch (_: Exception) {
             SubscriptionTier.NONE
         }
+        val proTypeString = prefs.getString(proTypeKey(cleanEmail), ProType.LIFETIME.name) ?: ProType.LIFETIME.name
+        val proType = try {
+            ProType.valueOf(proTypeString)
+        } catch (_: Exception) {
+            ProType.LIFETIME
+        }
+
         val trialStart = prefs.getLong(trialStartKey(cleanEmail), 0L)
         val activatedKey = prefs.getString(proKey(cleanEmail), null)
         val activatedAt = prefs.getLong(proDateKey(cleanEmail), 0L)
 
         return SubscriptionInfo(
             tier = if (isPro) SubscriptionTier.PRO else tier,
+            proType = if (isPro) proType else ProType.NONE,
             trialStartedAt = trialStart,
             isPro = isPro,
             activatedKey = activatedKey,
@@ -41,7 +51,7 @@ class SubscriptionRepository(context: Context) {
     fun start3DayTrial(email: String): SubscriptionInfo {
         val cleanEmail = ActivationKeySecurity.normalizeEmail(email)
         val existing = getSubscription(cleanEmail)
-        if (existing.isPro) return existing
+        if (existing.isPro && existing.isProActive) return existing
 
         // Only start if not already started; or refresh timestamp if NONE
         val startTime = if (existing.trialStartedAt > 0L) existing.trialStartedAt else System.currentTimeMillis()
@@ -78,11 +88,12 @@ class SubscriptionRepository(context: Context) {
             )
         }
 
-        // Successfully verified! Save Pro status permanently and bind key
+        val proType = ActivationKeySecurity.getKeyType(cleanKey)
         val now = System.currentTimeMillis()
         prefs.edit()
             .putBoolean("is_pro_$cleanEmail", true)
             .putString(tierKey(cleanEmail), SubscriptionTier.PRO.name)
+            .putString(proTypeKey(cleanEmail), proType.name)
             .putString(proKey(cleanEmail), cleanKey)
             .putLong(proDateKey(cleanEmail), now)
             .putString(boundAccountKey, cleanEmail)
@@ -108,6 +119,19 @@ class SubscriptionRepository(context: Context) {
         return getSubscription(cleanEmail)
     }
 
+    fun expireMonthlyForTesting(email: String): SubscriptionInfo {
+        val cleanEmail = ActivationKeySecurity.normalizeEmail(email)
+        val thirtyOneDaysAgo = System.currentTimeMillis() - (31L * 24L * 60L * 60L * 1000L)
+        prefs.edit()
+            .putBoolean("is_pro_$cleanEmail", true)
+            .putString(tierKey(cleanEmail), SubscriptionTier.PRO.name)
+            .putString(proTypeKey(cleanEmail), ProType.MONTHLY.name)
+            .putLong(proDateKey(cleanEmail), thirtyOneDaysAgo)
+            .apply()
+
+        return getSubscription(cleanEmail)
+    }
+
     fun resetTrialForTesting(email: String): SubscriptionInfo {
         val cleanEmail = ActivationKeySecurity.normalizeEmail(email)
         prefs.edit()
@@ -116,6 +140,7 @@ class SubscriptionRepository(context: Context) {
             .remove(trialStartKey(cleanEmail))
             .remove(proKey(cleanEmail))
             .remove(proDateKey(cleanEmail))
+            .remove(proTypeKey(cleanEmail))
             .apply()
 
         return getSubscription(cleanEmail)
