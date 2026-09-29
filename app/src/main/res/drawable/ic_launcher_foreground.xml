@@ -1,33 +1,66 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Center group within 66dp safe zone (21dp to 87dp) -->
-    <!-- Open Book Base Layer -->
+
+    <!-- Stylized Modern 'P' with Upward Growth Arrow (Prep Track Branding) -->
+    <!-- Safe zone: 21 to 87 -->
+
+    <!-- Upward Arrow integrated into Left Stem -->
     <path
-        android:fillColor="#E3F2FD"
-        android:pathData="M30,40 C30,37 33,35 37,35 L49,35 C52,35 54,37 54,39 L54,75 C54,73 51,71 47,71 L35,71 C32,71 30,73 30,75 Z" />
+        android:pathData="M38,76 L38,50 L48,50 L48,76 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="38"
+                android:startY="76"
+                android:endX="48"
+                android:endY="32"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#0A84FF" />
+                <item android:offset="1.0" android:color="#38BDF8" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Arrowhead on Stem -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M54,39 C54,37 56,35 59,35 L71,35 C75,35 78,37 78,40 L78,75 C78,73 76,71 73,71 L61,71 C57,71 54,73 54,75 Z" />
-    <!-- Book Spine & Pages Detail Lines -->
+        android:pathData="M33,52 L43,34 L53,52 L45,52 L45,54 L41,54 L41,52 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="33"
+                android:startY="52"
+                android:endX="53"
+                android:endY="34"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#0A84FF" />
+                <item android:offset="1.0" android:color="#60A5FA" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Top Loop of 'P' curving to the right -->
     <path
-        android:fillColor="#90CAF9"
-        android:pathData="M36,44 L48,44 L48,46 L36,46 Z M36,50 L48,50 L48,52 L36,52 Z M36,56 L44,56 L44,58 L36,58 Z" />
+        android:pathData="M43,32 L60,32 C68.8,32 76,39.2 76,48 C76,56.8 68.8,64 60,64 L48,64 L48,54 L60,54 C63.3,54 66,51.3 66,48 C66,44.7 63.3,42 60,42 L43,42 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="43"
+                android:startY="32"
+                android:endX="76"
+                android:endY="64"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#38BDF8" />
+                <item android:offset="0.5" android:color="#0A84FF" />
+                <item android:offset="1.0" android:color="#FFFFFF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Upward secondary motion arrow head at loop apex -->
     <path
-        android:fillColor="#BBDEFB"
-        android:pathData="M60,44 L72,44 L72,46 L60,46 Z M60,50 L72,50 L72,52 L60,52 Z M60,56 L68,56 L68,58 L60,58 Z" />
-    <!-- Dynamic Track Upward Arrow / Milestone -->
-    <path
-        android:fillColor="#FFCA28"
-        android:pathData="M54,26 L63,38 L57,38 L57,48 L51,48 L51,38 L45,38 Z" />
-    <!-- Study Checkmark Badge -->
-    <path
-        android:fillColor="#00E676"
-        android:pathData="M68,58 C68,53.6 71.6,50 76,50 C80.4,50 84,53.6 84,58 C84,62.4 80.4,66 76,66 C71.6,66 68,62.4 68,58 Z" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M73.5,58.5 L71.5,56.5 L70,58 L73.5,61.5 L81.5,53.5 L80,52 Z" />
+        android:fillColor="#38BDF8"
+        android:pathData="M70,36 L78,28 L82,38 L77,35 L74,42 L68,40 L71,33 Z" />
+
 </vector>

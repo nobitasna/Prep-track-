@@ -1,8 +1,10 @@
 package com.example.ui.screens.settings
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -14,9 +16,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.material3.OutlinedButton
+import com.example.ui.theme.PrepCyanSecondary
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Refresh
@@ -33,6 +42,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -49,12 +60,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.theme.PrepBlueDark
 import com.example.ui.theme.PrepBlueLight
 import com.example.ui.theme.PrepBluePrimary
+import com.example.ui.theme.PrepSuccess
 import com.example.viewmodel.AppScreen
 import com.example.viewmodel.MainViewModel
 
@@ -66,10 +79,21 @@ fun SettingsScreen(
 ) {
     val activeGoal by viewModel.activeGoal.collectAsStateWithLifecycle()
     val studyPlan by viewModel.studyPlan.collectAsStateWithLifecycle()
+    val userProfile by viewModel.userProfile.collectAsStateWithLifecycle()
 
     var studyReminderEnabled by remember { mutableStateOf(true) }
     var streakAlertsEnabled by remember { mutableStateOf(true) }
     var showResetDialog by remember { mutableStateOf(false) }
+
+    var showCustomNotesDialog by remember { mutableStateOf(false) }
+    var customNotesInput by remember { mutableStateOf("") }
+
+    val currentSpeed = studyPlan?.playbackSpeed ?: 1.0f
+    val currentNotesMin = studyPlan?.notesMinutesPerLecture ?: 30
+    val currentPracticeMin = studyPlan?.practiceMinutesDaily ?: 60
+    val currentRevisionMin = studyPlan?.revisionMinutesDaily ?: 30
+    val currentDays = studyPlan?.targetDays ?: 90
+    val currentPattern = studyPlan?.studyPattern ?: "WEEKLY_TIMETABLE"
 
     Column(
         modifier = Modifier
@@ -99,6 +123,104 @@ fun SettingsScreen(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
         ) {
+            // Google Account Profile & Sign Out
+            item {
+                Text(
+                    text = "GOOGLE ACCOUNT",
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
+                )
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 14.dp)
+                        .testTag("settings_google_account_card"),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(1.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .clip(CircleShape)
+                                    .background(PrepBluePrimary),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = userProfile.name.take(1).uppercase(),
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 20.sp
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = userProfile.name,
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = PrepCyanSecondary.copy(alpha = 0.15f)
+                                    ) {
+                                        Text(
+                                            text = "Google",
+                                            color = PrepCyanSecondary,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = userProfile.email,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    viewModel.signInWithGoogle()
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("settings_switch_account_button"),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text("Switch Account", fontSize = 13.sp)
+                            }
+
+                            Button(
+                                onClick = {
+                                    viewModel.signOut()
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("settings_sign_out_button"),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFEE2E2))
+                            ) {
+                                Text("Sign Out", color = Color(0xFFDC2626), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
+                        }
+                    }
+                }
+            }
+
             // Active Goal & Exam Section
             item {
                 Text(
@@ -158,10 +280,10 @@ fun SettingsScreen(
                 }
             }
 
-            // Planning Defaults
+            // Planning Preferences - DIRECTLY EDITABLE
             item {
                 Text(
-                    text = "PLANNING PREFERENCES",
+                    text = "PLANNING PREFERENCES (DIRECT EDIT)",
                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
@@ -176,50 +298,301 @@ fun SettingsScreen(
                     elevation = CardDefaults.cardElevation(1.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
+                        // 1. Playback Speed Selector
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column {
-                                Text("Default Playback Speed", fontWeight = FontWeight.SemiBold)
-                                Text("Current: ${studyPlan?.playbackSpeed ?: 1.0f}×", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("Playback Speed", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                Text("Adjusts watch time; 2h reference is fixed", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            TextButton(onClick = { viewModel.navigateTo(AppScreen.Plan) }) {
-                                Text("Change", color = PrepBluePrimary)
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = PrepBlueLight
+                            ) {
+                                Text(
+                                    text = "${currentSpeed}× active",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = PrepBluePrimary,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
                             }
                         }
 
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.surfaceVariant)
+                        Spacer(modifier = Modifier.height(10.dp))
 
+                        // Interactive speed chips
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Column {
-                                Text("Notes Time / Lecture", fontWeight = FontWeight.SemiBold)
-                                Text("Current: ${studyPlan?.notesMinutesPerLecture ?: 30} mins", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            TextButton(onClick = { viewModel.navigateTo(AppScreen.Plan) }) {
-                                Text("Change", color = PrepBluePrimary)
+                            listOf(1.0f, 1.25f, 1.5f, 1.75f, 2.0f).forEach { spd ->
+                                val isSel = currentSpeed == spd
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = if (isSel) PrepBluePrimary else PrepBlueLight,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { viewModel.updatePlaybackSpeed(spd) }
+                                        .testTag("settings_speed_${spd}")
+                                ) {
+                                    Text(
+                                        text = "${spd}×",
+                                        fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSel) Color.White else PrepBlueDark,
+                                        fontSize = 12.sp,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(vertical = 8.dp)
+                                    )
+                                }
                             }
                         }
 
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.surfaceVariant)
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 14.dp), color = MaterialTheme.colorScheme.surfaceVariant)
 
+                        // 2. Notes Time Per Lecture Selector
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column {
-                                Text("Study Pattern", fontWeight = FontWeight.SemiBold)
-                                Text("Current: ${if (studyPlan?.studyPattern == "WEEKLY_TIMETABLE") "Weekly Timetable" else "One By One"}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("Notes Time / Lecture", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                Text("Additional notes workload per lecture", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            TextButton(onClick = { viewModel.navigateTo(AppScreen.Plan) }) {
-                                Text("Change", color = PrepBluePrimary)
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = PrepBlueLight
+                            ) {
+                                Text(
+                                    text = if (currentNotesMin == 0) "None" else "${currentNotesMin}m active",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = PrepBluePrimary,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
                             }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Interactive notes chips
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            listOf(0 to "None", 15 to "15m", 30 to "30m", 45 to "45m", 60 to "60m").forEach { (min, label) ->
+                                val isSel = currentNotesMin == min
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = if (isSel) PrepBluePrimary else PrepBlueLight,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { viewModel.updateNotesTime(min) }
+                                        .testTag("settings_notes_${min}")
+                                ) {
+                                    Text(
+                                        text = label,
+                                        fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSel) Color.White else PrepBlueDark,
+                                        fontSize = 12.sp,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(vertical = 8.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        TextButton(
+                            onClick = {
+                                customNotesInput = currentNotesMin.toString()
+                                showCustomNotesDialog = true
+                            },
+                            modifier = Modifier.align(Alignment.End)
+                        ) {
+                            Text("+ Custom Minutes", fontSize = 12.sp, color = PrepBluePrimary)
+                        }
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.surfaceVariant)
+
+                        // 3. Daily Practice / DPP Workload
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text("Daily Practice / DPP", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                Text("Problem solving workload allocated daily", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = PrepBlueLight
+                            ) {
+                                Text(
+                                    text = if (currentPracticeMin == 0) "None" else "${currentPracticeMin}m active",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = PrepBluePrimary,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            listOf(0 to "None", 30 to "30m", 60 to "1h", 90 to "1.5h", 120 to "2h").forEach { (min, label) ->
+                                val isSel = currentPracticeMin == min
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = if (isSel) PrepBluePrimary else PrepBlueLight,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { viewModel.updatePracticeTime(min) }
+                                        .testTag("settings_practice_${min}")
+                                ) {
+                                    Text(
+                                        text = label,
+                                        fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSel) Color.White else PrepBlueDark,
+                                        fontSize = 12.sp,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(vertical = 8.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 14.dp), color = MaterialTheme.colorScheme.surfaceVariant)
+
+                        // 4. Target Days Deadline
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text("Finish Deadline (Days)", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                Text("Target timeframe for complete syllabus", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = PrepBlueLight
+                            ) {
+                                Text(
+                                    text = "$currentDays days",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = PrepBluePrimary,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            listOf(30, 60, 90, 120, 180).forEach { days ->
+                                val isSel = currentDays == days
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = if (isSel) PrepBluePrimary else PrepBlueLight,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { viewModel.updateTargetDays(days) }
+                                        .testTag("settings_days_${days}")
+                                ) {
+                                    Text(
+                                        text = "${days}d",
+                                        fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSel) Color.White else PrepBlueDark,
+                                        fontSize = 12.sp,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(vertical = 8.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 14.dp), color = MaterialTheme.colorScheme.surfaceVariant)
+
+                        // 5. Study Pattern Mode
+                        Text("Study Pattern Mode", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text("Weekly timetable vs sequential completion", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            val isWeekly = currentPattern == "WEEKLY_TIMETABLE"
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isWeekly) PrepBluePrimary else PrepBlueLight,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { viewModel.updateStudyPattern("WEEKLY_TIMETABLE") }
+                                    .testTag("settings_pattern_weekly")
+                            ) {
+                                Text(
+                                    text = "Weekly Timetable",
+                                    fontWeight = if (isWeekly) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isWeekly) Color.White else PrepBlueDark,
+                                    fontSize = 12.sp,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.padding(vertical = 10.dp)
+                                )
+                            }
+
+                            val isOneByOne = currentPattern == "ONE_BY_ONE"
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isOneByOne) PrepBluePrimary else PrepBlueLight,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { viewModel.updateStudyPattern("ONE_BY_ONE") }
+                                    .testTag("settings_pattern_one_by_one")
+                            ) {
+                                Text(
+                                    text = "One By One",
+                                    fontWeight = if (isOneByOne) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isOneByOne) Color.White else PrepBlueDark,
+                                    fontSize = 12.sp,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.padding(vertical = 10.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Button(
+                            onClick = { viewModel.navigateTo(AppScreen.Plan) },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = PrepBlueLight)
+                        ) {
+                            Icon(imageVector = Icons.Default.CalendarMonth, contentDescription = null, tint = PrepBlueDark, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Open Full Plan Details & Timetable",
+                                color = PrepBlueDark,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
                         }
                     }
                 }
@@ -355,6 +728,49 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+
+    // Custom Notes Minutes Dialog
+    if (showCustomNotesDialog) {
+        AlertDialog(
+            onDismissRequest = { showCustomNotesDialog = false },
+            title = { Text("Custom Notes Time") },
+            text = {
+                Column {
+                    Text(
+                        text = "Enter notes preparation time in minutes per lecture:",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = customNotesInput,
+                        onValueChange = { customNotesInput = it.filter { char -> char.isDigit() } },
+                        label = { Text("Minutes per lecture") },
+                        placeholder = { Text("e.g. 20, 40, 50") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val min = customNotesInput.toIntOrNull() ?: 30
+                        viewModel.updateNotesTime(min)
+                        showCustomNotesDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = PrepBluePrimary)
+                ) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCustomNotesDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     if (showResetDialog) {

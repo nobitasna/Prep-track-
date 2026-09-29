@@ -63,26 +63,30 @@ class PrepTrackRepository(private val database: AppDatabase) {
         category: String,
         examName: String,
         year: String,
-        targetDays: Int = 90
+        targetDays: Int = 90,
+        customTargetTimestamp: Long? = null
     ): Long {
         examGoalDao.deactivateAllGoals()
 
-        val cal = Calendar.getInstance()
-        cal.add(Calendar.DAY_OF_YEAR, targetDays)
-        val targetDateTimestamp = cal.timeInMillis
+        val finalTargetTimestamp = customTargetTimestamp ?: run {
+            val cal = Calendar.getInstance()
+            cal.add(Calendar.DAY_OF_YEAR, targetDays)
+            cal.timeInMillis
+        }
 
         val newGoal = ExamGoalEntity(
             category = category,
             examName = examName,
             targetYear = year,
-            targetDateTimestamp = targetDateTimestamp,
+            targetDateTimestamp = finalTargetTimestamp,
             isActive = true
         )
         val goalId = examGoalDao.insertGoal(newGoal)
 
-        // Find matching template or default
+        // Find matching template by examName FIRST, then fallback to category
         val template = DefaultSyllabusCatalog.allTemplates.find {
-            it.examName.equals(examName, ignoreCase = true) ||
+            it.examName.equals(examName, ignoreCase = true)
+        } ?: DefaultSyllabusCatalog.allTemplates.find {
             it.category.equals(category, ignoreCase = true)
         } ?: DefaultSyllabusCatalog.allTemplates.first()
 
@@ -129,7 +133,7 @@ class PrepTrackRepository(private val database: AppDatabase) {
             planScope = "ENTIRE",
             finishMode = "DAYS",
             targetDays = targetDays,
-            targetDateTimestamp = targetDateTimestamp,
+            targetDateTimestamp = finalTargetTimestamp,
             playbackSpeed = 1.0f,
             notesMinutesPerLecture = 30,
             practiceMinutesDaily = 60,
@@ -290,7 +294,13 @@ class PrepTrackRepository(private val database: AppDatabase) {
     }
 
     suspend fun updateStudyPlan(plan: StudyPlanEntity) {
-        studyPlanDao.updatePlan(plan)
+        val existing = studyPlanDao.getPlanForExamSync(plan.examId)
+        val toSave = if (existing != null) {
+            plan.copy(id = existing.id)
+        } else {
+            plan
+        }
+        studyPlanDao.insertPlan(toSave)
     }
 
     suspend fun updateWeeklyTimetable(planId: Long, entries: List<WeeklyTimetableEntryEntity>) {
@@ -392,5 +402,39 @@ class PrepTrackRepository(private val database: AppDatabase) {
         val cal = Calendar.getInstance()
         cal.add(Calendar.DAY_OF_YEAR, -1)
         return SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(cal.time)
+    }
+
+    suspend fun resetAndReloadSyllabusForActiveGoal(): Boolean {
+        val goal = examGoalDao.getActiveGoalSync() ?: return false
+        val plan = studyPlanDao.getPlanForExamSync(goal.id)
+        val targetDays = plan?.targetDays ?: 90
+        val targetTimestamp = plan?.targetDateTimestamp
+
+        // Re-initialize using clean template
+        initializeExamGoalWithDefaultSyllabus(
+            category = goal.category,
+            examName = goal.examName,
+            year = goal.targetYear,
+            targetDays = targetDays,
+            customTargetTimestamp = targetTimestamp
+        )
+        return true
+    }
+
+    suspend fun resetAllProgressForActiveGoal(): Boolean {
+        val goal = examGoalDao.getActiveGoalSync() ?: return false
+        val chapters = chapterDao.getAllChaptersForExamSync(goal.id)
+        val chIds = chapters.map { it.id }.toSet()
+        val lectures = lectureDao.getAllLecturesForExamSync(goal.id)
+        val resetLecs = lectures.filter { it.chapterId in chIds }.map {
+            it.copy(
+                isCompleted = false,
+                notesCompleted = false,
+                practiceCompleted = false,
+                completedAtTimestamp = 0L
+            )
+        }
+        lectureDao.insertLectures(resetLecs)
+        return true
     }
 }

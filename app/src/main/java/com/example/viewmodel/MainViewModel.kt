@@ -27,6 +27,9 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 
 sealed class AppScreen {
+    object Splash : AppScreen()
+    object Onboarding : AppScreen()
+    object Login : AppScreen()
     object OnboardingWelcome : AppScreen()
     object OnboardingSelectGoal : AppScreen()
     object Dashboard : AppScreen()
@@ -37,6 +40,13 @@ sealed class AppScreen {
     object Analytics : AppScreen()
     object Settings : AppScreen()
 }
+
+data class UserProfile(
+    val name: String = "Shubh Anand",
+    val email: String = "nobitanobi7209@gmail.com",
+    val photoUrl: String? = null,
+    val isLoggedIn: Boolean = false
+)
 
 data class SubjectProgressData(
     val subject: SubjectEntity,
@@ -61,6 +71,20 @@ data class TodayTaskItem(
     val practiceCompleted: Boolean
 )
 
+data class TodayProgressSummary(
+    val totalTasks: Int,
+    val completedLectures: Int,
+    val notesDone: Int,
+    val practiceDone: Int,
+    val progressFraction: Float,
+    val completedWorkloadHours: Float,
+    val completedWorkloadFormatted: String,
+    val remainingWorkloadFormatted: String,
+    val targetWorkloadHours: Float,
+    val targetWorkloadFormatted: String,
+    val isGoalAchieved: Boolean
+)
+
 data class PomodoroUiState(
     val isRunning: Boolean = false,
     val isBreak: Boolean = false,
@@ -76,13 +100,23 @@ data class PomodoroUiState(
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: PrepTrackRepository
+    private val authPrefs = application.getSharedPreferences("prep_track_auth", android.content.Context.MODE_PRIVATE)
 
-    init {
-        val database = AppDatabase.getInstance(application)
-        repository = PrepTrackRepository(database)
-    }
+    private val _userProfile = MutableStateFlow(
+        UserProfile(
+            name = authPrefs.getString("user_name", "Shubh Anand") ?: "Shubh Anand",
+            email = authPrefs.getString("user_email", "nobitanobi7209@gmail.com") ?: "nobitanobi7209@gmail.com",
+            photoUrl = authPrefs.getString("user_photo", null),
+            isLoggedIn = authPrefs.getBoolean("is_logged_in", false)
+        )
+    )
+    val userProfile: StateFlow<UserProfile> = _userProfile.asStateFlow()
 
-    private val _currentScreen = MutableStateFlow<AppScreen>(AppScreen.Dashboard)
+    private val isInitiallyLoggedIn = authPrefs.getBoolean("is_logged_in", false)
+
+    private val _currentScreen = MutableStateFlow<AppScreen>(
+        if (!isInitiallyLoggedIn) AppScreen.Splash else AppScreen.Dashboard
+    )
     val currentScreen: StateFlow<AppScreen> = _currentScreen.asStateFlow()
 
     private val _screenHistory = mutableListOf<AppScreen>()
@@ -98,6 +132,44 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return true
         }
         return false
+    }
+
+    fun signInWithGoogle(name: String = "Shubh Anand", email: String = "nobitanobi7209@gmail.com") {
+        authPrefs.edit()
+            .putBoolean("is_logged_in", true)
+            .putString("user_name", name)
+            .putString("user_email", email)
+            .apply()
+        _userProfile.value = UserProfile(name = name, email = email, isLoggedIn = true)
+        val goal = activeGoal.value
+        if (goal != null) {
+            _currentScreen.value = AppScreen.Dashboard
+        } else {
+            _currentScreen.value = AppScreen.OnboardingSelectGoal
+        }
+    }
+
+    fun loginWithEmail(email: String, password: String) {
+        val derivedName = if (email.contains("@")) {
+            email.substringBefore("@").replace(".", " ")
+                .split(" ").joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
+        } else "Shubh Anand"
+        signInWithGoogle(name = derivedName.ifEmpty { "Shubh Anand" }, email = email.ifEmpty { "nobitanobi7209@gmail.com" })
+    }
+
+    fun signOut() {
+        authPrefs.edit().putBoolean("is_logged_in", false).apply()
+        _userProfile.value = _userProfile.value.copy(isLoggedIn = false)
+        _currentScreen.value = AppScreen.Login
+    }
+
+    init {
+        val database = AppDatabase.getInstance(application)
+        repository = PrepTrackRepository(database)
+
+        if (!isInitiallyLoggedIn) {
+            _currentScreen.value = AppScreen.Splash
+        }
     }
 
     // Database flows
@@ -197,6 +269,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _studyPlan,
         _timetable
     ) { subs, chaps, lecs, plan, timetableEntries ->
+        val cal = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val todayStart = cal.timeInMillis
+
         val dayOfWeek = Calendar.getInstance().get(Calendar.DAY_OF_WEEK) // Sun=1, Mon=2...
         val dayMapped = if (dayOfWeek == Calendar.SUNDAY) 7 else dayOfWeek - 1 // 1=Mon..7=Sun
 
@@ -214,12 +294,46 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val subjectMap = subs.associateBy { it.id }
         val chapterMap = chaps.associateBy { it.id }
 
-        // Pick upcoming incomplete lectures from assigned subjects (up to 4-5 tasks for today)
         val tasks = mutableListOf<TodayTaskItem>()
-        val filteredChaps = chaps.filter { it.subjectId in assignedSubjectIds && !it.isHidden }
 
+        // 1. Always keep lectures completed today so user sees completed status & ticks!
+        val completedToday = lecs.filter { it.isCompleted && it.completedAtTimestamp >= todayStart }
+        for (lec in completedToday) {
+            val chap = chapterMap[lec.chapterId]
+            val sub = chap?.let { subjectMap[it.subjectId] }
+            if (chap != null && sub != null) {
+                tasks.add(
+                    TodayTaskItem(
+                        id = lec.id,
+                        lectureId = lec.id,
+                        subjectName = sub.name,
+                        subjectColor = sub.colorHex,
+                        chapterName = chap.name,
+                        lectureTitle = lec.title,
+                        lectureNumber = lec.lectureNumber,
+                        isCompleted = lec.isCompleted,
+                        notesCompleted = lec.notesCompleted,
+                        practiceCompleted = lec.practiceCompleted
+                    )
+                )
+            }
+        }
+
+        // Dynamically compute the exact daily task count needed to complete the syllabus in targetDays!
+        val speed = plan?.playbackSpeed ?: 1.0f
+        val notesMin = plan?.notesMinutesPerLecture ?: 30
+        val targetDays = (plan?.targetDays ?: 90).coerceAtLeast(1)
+
+        val totalActiveLecs = lecs.count { !itChapterExcluded(it.chapterId) }
+        val requiredLecturesDaily = Math.ceil(totalActiveLecs.toDouble() / targetDays).toInt().coerceAtLeast(1)
+        val targetDailyTaskCount = requiredLecturesDaily.coerceIn(1, 15)
+
+        val filteredChaps = chaps.filter { (assignedSubjectIds.isEmpty() || it.subjectId in assignedSubjectIds) && !it.isHidden }
+
+        // 2. Add pending incomplete lectures from assigned subjects
         for (chap in filteredChaps) {
-            val pendingLecs = lecs.filter { it.chapterId == chap.id && !it.isCompleted }.take(2)
+            if (tasks.size >= targetDailyTaskCount) break
+            val pendingLecs = lecs.filter { it.chapterId == chap.id && !it.isCompleted && tasks.none { t -> t.lectureId == it.id } }
             for (lec in pendingLecs) {
                 val sub = subjectMap[chap.subjectId]
                 tasks.add(
@@ -236,15 +350,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         practiceCompleted = lec.practiceCompleted
                     )
                 )
-                if (tasks.size >= 4) break
+                if (tasks.size >= targetDailyTaskCount) break
             }
-            if (tasks.size >= 4) break
         }
 
-        // If all completed or no tasks from assigned, pick any first 2 pending from syllabus
-        if (tasks.isEmpty()) {
-            val firstPending = lecs.filter { !it.isCompleted }.take(2)
-            for (lec in firstPending) {
+        // 3. Fallback: if assigned subjects are empty or completed, add from any pending syllabus chapter
+        if (tasks.size < targetDailyTaskCount) {
+            val remainingSyllabus = lecs.filter { !it.isCompleted && tasks.none { t -> t.lectureId == it.id } }
+                .take(targetDailyTaskCount - tasks.size)
+            for (lec in remainingSyllabus) {
                 val chap = chapterMap[lec.chapterId]
                 val sub = chap?.let { subjectMap[it.subjectId] }
                 if (chap != null && sub != null) {
@@ -265,8 +379,89 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
         }
+
         tasks
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Summary of today's progress, actions, and workload achievement
+    val todayProgressSummary: StateFlow<TodayProgressSummary> = combine(
+        todayTasks,
+        planCalculation,
+        _studyPlan
+    ) { tasks, calc, plan ->
+        val total = tasks.size
+        val completedLec = tasks.count { it.isCompleted }
+        val notesDone = tasks.count { it.notesCompleted }
+        val practiceDone = tasks.count { it.practiceCompleted }
+
+        // Dynamic task completion fraction:
+        // Watch lecture = 60%, Notes = 20%, Practice DPP = 20%
+        val fraction = if (total > 0) {
+            val totalScore = tasks.sumOf { task ->
+                (if (task.isCompleted) 0.6 else 0.0) +
+                (if (task.notesCompleted) 0.2 else 0.0) +
+                (if (task.practiceCompleted) 0.2 else 0.0)
+            }
+            (totalScore / total).toFloat().coerceIn(0f, 1f)
+        } else {
+            0f
+        }
+
+        val speed = plan?.playbackSpeed ?: 1.0f
+        val notesMin = plan?.notesMinutesPerLecture ?: 30
+        val practiceMin = plan?.practiceMinutesDaily ?: 60
+        val revisionMin = plan?.revisionMinutesDaily ?: 30
+
+        val lectureWatchHours = 2.0f / speed
+        val lectureNotesHours = notesMin / 60.0f
+        val dailyPracticeHours = practiceMin / 60.0f
+        val dailyRevisionHours = revisionMin / 60.0f
+
+        // The daily planned target hours is FIXED and matches calc.dailyEstimatedWorkloadHours
+        val targetDailyHours = calc.dailyEstimatedWorkloadHours.toFloat().coerceAtLeast(0.1f)
+        val targetFormatted = calc.dailyWorkloadFormatted
+
+        // Workload completed: each lecture watched gives lectureWatchHours, each notes done gives lectureNotesHours,
+        // and practice/revision are distributed across the planned daily tasks:
+        val taskCountForDistribution = maxOf(total, calc.dailyLecturesRequired).coerceAtLeast(1)
+        val completedWorkload = (completedLec * lectureWatchHours) +
+                                (notesDone * lectureNotesHours) +
+                                (practiceDone * ((dailyPracticeHours + dailyRevisionHours) / taskCountForDistribution))
+
+        val remainingHours = (targetDailyHours - completedWorkload).coerceAtLeast(0f)
+        val completedFormatted = StudyPlanCalculation.formatHoursMinutes(completedWorkload.toDouble())
+        val remainingFormatted = StudyPlanCalculation.formatHoursMinutes(remainingHours.toDouble())
+
+        val workloadFraction = (completedWorkload / targetDailyHours).coerceIn(0f, 1f)
+        val taskFraction = if (total > 0) {
+            val totalScore = tasks.sumOf { task ->
+                (if (task.isCompleted) 0.6 else 0.0) +
+                (if (task.notesCompleted) 0.2 else 0.0) +
+                (if (task.practiceCompleted) 0.2 else 0.0)
+            }
+            (totalScore / total).toFloat().coerceIn(0f, 1f)
+        } else 0f
+        val finalFraction = maxOf(taskFraction, workloadFraction)
+        val isAchieved = (completedWorkload >= targetDailyHours - 0.05f) || (total > 0 && completedLec == total && notesDone == total && practiceDone == total)
+
+        TodayProgressSummary(
+            totalTasks = total,
+            completedLectures = completedLec,
+            notesDone = notesDone,
+            practiceDone = practiceDone,
+            progressFraction = finalFraction,
+            completedWorkloadHours = completedWorkload,
+            completedWorkloadFormatted = completedFormatted,
+            remainingWorkloadFormatted = remainingFormatted,
+            targetWorkloadHours = targetDailyHours,
+            targetWorkloadFormatted = targetFormatted,
+            isGoalAchieved = isAchieved
+        )
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        TodayProgressSummary(0, 0, 0, 0, 0f, 0f, "0h 0m", "0h 0m", 0f, "0h 0m", false)
+    )
 
     // Pomodoro Timer State
     private val _pomodoroState = MutableStateFlow(PomodoroUiState())
@@ -290,10 +485,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     }
                 } else {
-                    // Check if any goals exist in database, if none show onboarding
-                    val syncGoal = repository.getActiveGoalSync()
-                    if (syncGoal == null) {
-                        _currentScreen.value = AppScreen.OnboardingWelcome
+                    if (!authPrefs.getBoolean("is_logged_in", false)) {
+                        _currentScreen.value = AppScreen.Splash
+                    } else {
+                        val syncGoal = repository.getActiveGoalSync()
+                        if (syncGoal == null) {
+                            _currentScreen.value = AppScreen.OnboardingSelectGoal
+                        }
                     }
                 }
             }
@@ -306,10 +504,47 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // Onboarding Actions
-    fun completeOnboarding(category: String, examName: String, year: String, days: Int = 90) {
+    fun completeOnboarding(
+        category: String,
+        examName: String,
+        year: String,
+        days: Int = 90,
+        customTargetTimestamp: Long? = null
+    ) {
         viewModelScope.launch {
-            repository.initializeExamGoalWithDefaultSyllabus(category, examName, year, days)
+            repository.initializeExamGoalWithDefaultSyllabus(category, examName, year, days, customTargetTimestamp)
             _currentScreen.value = AppScreen.Dashboard
+        }
+    }
+
+    fun updateTargetDate(targetTimestamp: Long) {
+        viewModelScope.launch {
+            val now = System.currentTimeMillis()
+            val diffDays = ((targetTimestamp - now) / (1000 * 60 * 60 * 24)).toInt().coerceAtLeast(1)
+            val goal = activeGoal.value ?: repository.getActiveGoalSync()
+            val currentPlan = _studyPlan.value ?: (if (goal != null) repository.getPlanForExamSync(goal.id) else null)
+            val updated = if (currentPlan != null) {
+                currentPlan.copy(targetDays = diffDays, targetDateTimestamp = targetTimestamp)
+            } else if (goal != null) {
+                StudyPlanEntity(examId = goal.id, targetDays = diffDays, targetDateTimestamp = targetTimestamp)
+            } else null
+
+            if (updated != null) {
+                repository.updateStudyPlan(updated)
+                _studyPlan.value = updated
+            }
+        }
+    }
+
+    fun resetAndReloadSyllabus() {
+        viewModelScope.launch {
+            repository.resetAndReloadSyllabusForActiveGoal()
+        }
+    }
+
+    fun resetAllProgress() {
+        viewModelScope.launch {
+            repository.resetAllProgressForActiveGoal()
         }
     }
 
@@ -399,46 +634,106 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // Study Plan Customization
     fun updatePlaybackSpeed(speed: Float) {
-        val plan = _studyPlan.value ?: return
         viewModelScope.launch {
-            repository.updateStudyPlan(plan.copy(playbackSpeed = speed))
+            val goal = activeGoal.value ?: repository.getActiveGoalSync()
+            val currentPlan = _studyPlan.value ?: (if (goal != null) repository.getPlanForExamSync(goal.id) else null)
+            val updated = if (currentPlan != null) {
+                currentPlan.copy(playbackSpeed = speed)
+            } else if (goal != null) {
+                StudyPlanEntity(examId = goal.id, playbackSpeed = speed)
+            } else null
+
+            if (updated != null) {
+                repository.updateStudyPlan(updated)
+                _studyPlan.value = updated
+            }
         }
     }
 
     fun updateNotesTime(minutes: Int) {
-        val plan = _studyPlan.value ?: return
         viewModelScope.launch {
-            repository.updateStudyPlan(plan.copy(notesMinutesPerLecture = minutes))
+            val goal = activeGoal.value ?: repository.getActiveGoalSync()
+            val currentPlan = _studyPlan.value ?: (if (goal != null) repository.getPlanForExamSync(goal.id) else null)
+            val updated = if (currentPlan != null) {
+                currentPlan.copy(notesMinutesPerLecture = minutes)
+            } else if (goal != null) {
+                StudyPlanEntity(examId = goal.id, notesMinutesPerLecture = minutes)
+            } else null
+
+            if (updated != null) {
+                repository.updateStudyPlan(updated)
+                _studyPlan.value = updated
+            }
         }
     }
 
     fun updatePracticeTime(minutes: Int) {
-        val plan = _studyPlan.value ?: return
         viewModelScope.launch {
-            repository.updateStudyPlan(plan.copy(practiceMinutesDaily = minutes))
+            val goal = activeGoal.value ?: repository.getActiveGoalSync()
+            val currentPlan = _studyPlan.value ?: (if (goal != null) repository.getPlanForExamSync(goal.id) else null)
+            val updated = if (currentPlan != null) {
+                currentPlan.copy(practiceMinutesDaily = minutes)
+            } else if (goal != null) {
+                StudyPlanEntity(examId = goal.id, practiceMinutesDaily = minutes)
+            } else null
+
+            if (updated != null) {
+                repository.updateStudyPlan(updated)
+                _studyPlan.value = updated
+            }
         }
     }
 
     fun updateRevisionTime(minutes: Int) {
-        val plan = _studyPlan.value ?: return
         viewModelScope.launch {
-            repository.updateStudyPlan(plan.copy(revisionMinutesDaily = minutes))
+            val goal = activeGoal.value ?: repository.getActiveGoalSync()
+            val currentPlan = _studyPlan.value ?: (if (goal != null) repository.getPlanForExamSync(goal.id) else null)
+            val updated = if (currentPlan != null) {
+                currentPlan.copy(revisionMinutesDaily = minutes)
+            } else if (goal != null) {
+                StudyPlanEntity(examId = goal.id, revisionMinutesDaily = minutes)
+            } else null
+
+            if (updated != null) {
+                repository.updateStudyPlan(updated)
+                _studyPlan.value = updated
+            }
         }
     }
 
     fun updateTargetDays(days: Int) {
-        val plan = _studyPlan.value ?: return
-        val cal = Calendar.getInstance()
-        cal.add(Calendar.DAY_OF_YEAR, days)
         viewModelScope.launch {
-            repository.updateStudyPlan(plan.copy(targetDays = days, targetDateTimestamp = cal.timeInMillis))
+            val cal = Calendar.getInstance()
+            cal.add(Calendar.DAY_OF_YEAR, days)
+            val goal = activeGoal.value ?: repository.getActiveGoalSync()
+            val currentPlan = _studyPlan.value ?: (if (goal != null) repository.getPlanForExamSync(goal.id) else null)
+            val updated = if (currentPlan != null) {
+                currentPlan.copy(targetDays = days, targetDateTimestamp = cal.timeInMillis)
+            } else if (goal != null) {
+                StudyPlanEntity(examId = goal.id, targetDays = days, targetDateTimestamp = cal.timeInMillis)
+            } else null
+
+            if (updated != null) {
+                repository.updateStudyPlan(updated)
+                _studyPlan.value = updated
+            }
         }
     }
 
     fun updateStudyPattern(pattern: String) {
-        val plan = _studyPlan.value ?: return
         viewModelScope.launch {
-            repository.updateStudyPlan(plan.copy(studyPattern = pattern))
+            val goal = activeGoal.value ?: repository.getActiveGoalSync()
+            val currentPlan = _studyPlan.value ?: (if (goal != null) repository.getPlanForExamSync(goal.id) else null)
+            val updated = if (currentPlan != null) {
+                currentPlan.copy(studyPattern = pattern)
+            } else if (goal != null) {
+                StudyPlanEntity(examId = goal.id, studyPattern = pattern)
+            } else null
+
+            if (updated != null) {
+                repository.updateStudyPlan(updated)
+                _studyPlan.value = updated
+            }
         }
     }
 

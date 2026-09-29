@@ -20,6 +20,9 @@ import com.example.ui.screens.dashboard.DashboardScreen
 import com.example.ui.screens.focus.FocusScreen
 import com.example.ui.screens.onboarding.OnboardingSelectGoalScreen
 import com.example.ui.screens.onboarding.OnboardingWelcomeScreen
+import com.example.ui.screens.onboarding.SplashScreen
+import com.example.ui.screens.onboarding.OnboardingCarouselScreen
+import com.example.ui.screens.onboarding.LoginScreen
 import com.example.ui.screens.plan.PlanScreen
 import com.example.ui.screens.settings.SettingsScreen
 import com.example.ui.screens.syllabus.ChapterDetailScreen
@@ -49,24 +52,31 @@ fun PrepTrackApp(
     val userStreak by viewModel.userStreak.collectAsStateWithLifecycle()
 
     // Back button handling for all sub-screens
-    BackHandler(enabled = currentScreen !is AppScreen.Dashboard && currentScreen !is AppScreen.OnboardingWelcome) {
+    BackHandler(enabled = currentScreen !is AppScreen.Dashboard && currentScreen !is AppScreen.Splash && currentScreen !is AppScreen.Login) {
         when (currentScreen) {
             is AppScreen.ChapterDetail -> viewModel.navigateTo(AppScreen.Syllabus)
             is AppScreen.Settings -> viewModel.navigateBack()
-            is AppScreen.OnboardingSelectGoal -> viewModel.navigateTo(AppScreen.OnboardingWelcome)
+            is AppScreen.OnboardingSelectGoal -> viewModel.navigateTo(AppScreen.Dashboard)
+            is AppScreen.Onboarding -> viewModel.navigateTo(AppScreen.Splash)
+            is AppScreen.Login -> viewModel.navigateTo(AppScreen.Onboarding)
             else -> viewModel.navigateTo(AppScreen.Dashboard)
         }
     }
 
-    val showBars = currentScreen !is AppScreen.OnboardingWelcome &&
-            currentScreen !is AppScreen.OnboardingSelectGoal &&
+    val showBottomBar = currentScreen !is AppScreen.Splash &&
+            currentScreen !is AppScreen.Onboarding &&
+            currentScreen !is AppScreen.Login &&
+            currentScreen !is AppScreen.OnboardingWelcome &&
+            currentScreen !is AppScreen.OnboardingSelectGoal
+
+    val showTopBar = showBottomBar &&
             currentScreen !is AppScreen.ChapterDetail &&
             currentScreen !is AppScreen.Settings
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            if (showBars) {
+            if (showTopBar) {
                 val title = when (currentScreen) {
                     is AppScreen.Dashboard -> "PREP TRACK"
                     is AppScreen.Plan -> "Study Planner"
@@ -93,7 +103,7 @@ fun PrepTrackApp(
             }
         },
         bottomBar = {
-            if (showBars) {
+            if (showBottomBar) {
                 PrepTrackBottomBar(
                     currentScreen = currentScreen,
                     onTabSelected = { screen -> viewModel.navigateTo(screen) }
@@ -104,6 +114,26 @@ fun PrepTrackApp(
         val contentModifier = Modifier.padding(innerPadding)
 
         when (val screen = currentScreen) {
+            is AppScreen.Splash -> {
+                SplashScreen(
+                    onTimeout = { viewModel.navigateTo(AppScreen.Onboarding) }
+                )
+            }
+            is AppScreen.Onboarding -> {
+                OnboardingCarouselScreen(
+                    initialPage = 1,
+                    onFinishOnboarding = { viewModel.navigateTo(AppScreen.Login) },
+                    onNavigateToLogin = { viewModel.navigateTo(AppScreen.Login) }
+                )
+            }
+            is AppScreen.Login -> {
+                LoginScreen(
+                    onGoogleSignIn = { viewModel.signInWithGoogle() },
+                    onLoginSuccess = { viewModel.signInWithGoogle() },
+                    onNavigateToSignUp = { viewModel.signInWithGoogle() },
+                    onBack = { viewModel.navigateTo(AppScreen.Onboarding) }
+                )
+            }
             is AppScreen.OnboardingWelcome -> {
                 OnboardingWelcomeScreen(
                     onGetStarted = { viewModel.navigateTo(AppScreen.OnboardingSelectGoal) }

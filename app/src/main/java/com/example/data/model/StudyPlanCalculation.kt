@@ -32,6 +32,7 @@ data class StudyPlanCalculation(
 
     // Total Workloads
     val targetDays: Int,
+    val dailyLecturesRequired: Int,
     val totalEstimatedWorkloadHours: Double,
     val remainingEstimatedWorkloadHours: Double,
     val dailyEstimatedWorkloadHours: Double,
@@ -84,8 +85,14 @@ data class StudyPlanCalculation(
 
             // Total Workload
             val totalWorkload = totalEstimatedWatchHours + totalNotesHours + totalPracticeHours + totalRevisionHours
+            // Daily required lectures to finish the syllabus in the target days:
+            val dailyLecturesRequired = Math.ceil(safeTotal.toDouble() / safeDays).toInt().coerceAtLeast(1)
+            val dailyWatchHours = dailyLecturesRequired * (FIXED_LECTURE_REFERENCE_HOURS / safeSpeed)
+            val dailyNotesHours = dailyLecturesRequired * (notesMinutesPerLecture / 60.0)
+            // Fixed Daily Target: Represents the exact planned daily required workload for the scheduled daily lectures + practice + revision
+            val fixedDailyTargetWorkload = dailyWatchHours + dailyNotesHours + dailyPracticeHours + dailyRevisionHours + (missedAdjustmentHours.toDouble() / safeDays)
             val remainingWatchAndNotes = remainingEstimatedWatchHours + remainingNotesHours + missedAdjustmentHours.toDouble()
-            val dailyWorkload = (remainingWatchAndNotes / safeDays) + dailyPracticeHours + dailyRevisionHours
+            val dynamicRemainingDailyWorkload = (remainingWatchAndNotes / safeDays) + dailyPracticeHours + dailyRevisionHours
 
             return StudyPlanCalculation(
                 totalLectures = safeTotal,
@@ -107,10 +114,11 @@ data class StudyPlanCalculation(
                 dailyPracticeHours = dailyPracticeHours,
                 dailyRevisionHours = dailyRevisionHours,
                 targetDays = safeDays,
+                dailyLecturesRequired = dailyLecturesRequired,
                 totalEstimatedWorkloadHours = totalWorkload,
                 remainingEstimatedWorkloadHours = remainingWatchAndNotes + (dailyPracticeHours + dailyRevisionHours) * safeDays,
-                dailyEstimatedWorkloadHours = dailyWorkload,
-                dailyWorkloadFormatted = formatHoursMinutes(dailyWorkload),
+                dailyEstimatedWorkloadHours = fixedDailyTargetWorkload,
+                dailyWorkloadFormatted = formatHoursMinutes(fixedDailyTargetWorkload),
                 totalWorkloadFormatted = formatHoursMinutes(totalWorkload),
                 referenceHoursFormatted = formatHoursMinutes(totalReferenceHours),
                 estimatedWatchHoursFormatted = formatHoursMinutes(totalEstimatedWatchHours)
@@ -118,7 +126,7 @@ data class StudyPlanCalculation(
         }
 
         fun formatHoursMinutes(hoursDecimal: Double): String {
-            val totalMinutes = (hoursDecimal * 60).toLong().coerceAtLeast(0)
+            val totalMinutes = Math.round(hoursDecimal * 60).toLong().coerceAtLeast(0)
             val h = totalMinutes / 60
             val m = totalMinutes % 60
             return when {

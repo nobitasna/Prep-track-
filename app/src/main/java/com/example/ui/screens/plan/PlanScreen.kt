@@ -29,6 +29,9 @@ import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material.icons.filled.ViewWeek
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -36,8 +39,11 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,6 +57,12 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.app.DatePickerDialog
+import androidx.compose.ui.platform.LocalContext
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.theme.PrepBlueDark
 import com.example.ui.theme.PrepBlueLight
@@ -75,6 +87,11 @@ fun PlanScreen(
     val currentRevisionMin = studyPlan?.revisionMinutesDaily ?: 30
     val currentDays = studyPlan?.targetDays ?: 90
     val currentPattern = studyPlan?.studyPattern ?: "WEEKLY_TIMETABLE"
+
+    var showCustomNotesDialog by remember { mutableStateOf(false) }
+    var customNotesInput by remember { mutableStateOf("") }
+    var showCustomDaysDialog by remember { mutableStateOf(false) }
+    var customDaysInput by remember { mutableStateOf("") }
 
     LazyColumn(
         modifier = modifier
@@ -274,6 +291,62 @@ fun PlanScreen(
                             }
                         }
                     }
+
+                    val targetDateStr = studyPlan?.targetDateTimestamp?.let {
+                        SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(it))
+                    }
+                    if (targetDateStr != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Target Date: $targetDateStr ($currentDays days remaining)",
+                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                            color = PrepBluePrimary
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val context = LocalContext.current
+                        OutlinedButton(
+                            onClick = {
+                                val currentCal = Calendar.getInstance().apply {
+                                    studyPlan?.targetDateTimestamp?.let { timeInMillis = it }
+                                }
+                                DatePickerDialog(
+                                    context,
+                                    { _, year, month, dayOfMonth ->
+                                        val pickedCal = Calendar.getInstance().apply {
+                                            set(year, month, dayOfMonth, 23, 59, 59)
+                                        }
+                                        viewModel.updateTargetDate(pickedCal.timeInMillis)
+                                    },
+                                    currentCal.get(Calendar.YEAR),
+                                    currentCal.get(Calendar.MONTH),
+                                    currentCal.get(Calendar.DAY_OF_MONTH)
+                                ).show()
+                            },
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.CalendarMonth, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Pick Calendar Date", fontSize = 12.sp)
+                        }
+
+                        TextButton(
+                            onClick = {
+                                customDaysInput = currentDays.toString()
+                                showCustomDaysDialog = true
+                            }
+                        ) {
+                            Text("+ Custom Days", fontSize = 12.sp, color = PrepBluePrimary)
+                        }
+                    }
                 }
             }
         }
@@ -395,6 +468,18 @@ fun PlanScreen(
                                 )
                             }
                         }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    TextButton(
+                        onClick = {
+                            customNotesInput = currentNotesMin.toString()
+                            showCustomNotesDialog = true
+                        },
+                        modifier = Modifier.align(Alignment.End)
+                    ) {
+                        Text("+ Custom Minutes", fontSize = 12.sp, color = PrepBluePrimary)
                     }
                 }
             }
@@ -579,6 +664,92 @@ fun PlanScreen(
                 }
             }
         }
+    }
+
+    if (showCustomNotesDialog) {
+        AlertDialog(
+            onDismissRequest = { showCustomNotesDialog = false },
+            title = { Text("Custom Notes Time") },
+            text = {
+                Column {
+                    Text(
+                        text = "Enter notes preparation time in minutes per lecture:",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = customNotesInput,
+                        onValueChange = { customNotesInput = it.filter { char -> char.isDigit() } },
+                        label = { Text("Minutes per lecture") },
+                        placeholder = { Text("e.g. 20, 35, 50") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val min = customNotesInput.toIntOrNull() ?: 30
+                        viewModel.updateNotesTime(min)
+                        showCustomNotesDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = PrepBluePrimary)
+                ) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCustomNotesDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showCustomDaysDialog) {
+        AlertDialog(
+            onDismissRequest = { showCustomDaysDialog = false },
+            title = { Text("Custom Completion Target") },
+            text = {
+                Column {
+                    Text(
+                        text = "Enter total target days to finish your syllabus:",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = customDaysInput,
+                        onValueChange = { customDaysInput = it.filter { char -> char.isDigit() } },
+                        label = { Text("Target Days") },
+                        placeholder = { Text("e.g. 45, 75, 150") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val days = customDaysInput.toIntOrNull() ?: 90
+                        if (days > 0) {
+                            viewModel.updateTargetDays(days)
+                        }
+                        showCustomDaysDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = PrepBluePrimary)
+                ) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCustomDaysDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 

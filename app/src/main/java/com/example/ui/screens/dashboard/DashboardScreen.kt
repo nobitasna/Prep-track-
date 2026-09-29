@@ -30,11 +30,14 @@ import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.HourglassBottom
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Circle
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -49,6 +52,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -65,6 +69,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.components.ProgressRing
+import androidx.compose.foundation.border
+import androidx.compose.material.icons.filled.School
+import com.example.ui.theme.PrepBorder
+import com.example.ui.theme.PrepSurface
+import com.example.ui.theme.PrepSurfaceVariant
 import com.example.ui.theme.PrepBlueDark
 import com.example.ui.theme.PrepBlueLight
 import com.example.ui.theme.PrepBluePrimary
@@ -86,13 +95,14 @@ fun DashboardScreen(
     val planCalc by viewModel.planCalculation.collectAsStateWithLifecycle()
     val subjectProgress by viewModel.subjectProgressList.collectAsStateWithLifecycle()
     val todayTasks by viewModel.todayTasks.collectAsStateWithLifecycle()
+    val todayProgress by viewModel.todayProgressSummary.collectAsStateWithLifecycle()
     val studyPlan by viewModel.studyPlan.collectAsStateWithLifecycle()
+    val userProfile by viewModel.userProfile.collectAsStateWithLifecycle()
 
     var showMissedAdjustDialog by remember { mutableStateOf(false) }
+    var showResetDialog by remember { mutableStateOf(false) }
 
-    val completedLecturesToday = todayTasks.count { it.isCompleted }
-    val totalLecturesToday = todayTasks.size
-    val dailyProgressFraction = if (totalLecturesToday > 0) completedLecturesToday.toFloat() / totalLecturesToday else 0f
+    val dailyProgressFraction = todayProgress.progressFraction
 
     LazyColumn(
         modifier = modifier
@@ -100,7 +110,7 @@ fun DashboardScreen(
             .background(MaterialTheme.colorScheme.background),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        // Welcome Header & Current Exam Goal
+        // Welcome Top Bar matching Design Spec Figure
         item {
             val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
             val greeting = when {
@@ -108,70 +118,270 @@ fun DashboardScreen(
                 hour < 17 -> "Good Afternoon"
                 else -> "Good Evening"
             }
+            val firstName = userProfile.name.split(" ").firstOrNull()?.ifEmpty { "Shubh" } ?: "Shubh"
 
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp, bottom = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(46.dp)
+                            .clip(CircleShape)
+                            .background(PrepBlueLight)
+                            .border(1.5.dp, PrepBluePrimary, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = firstName.take(1).uppercase(),
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = PrepCyanSecondary
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "$greeting, $firstName ☀️",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "${activeGoal?.examName ?: "PREP TRACK"} (${activeGoal?.targetYear ?: "Target"})",
+                                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                                color = PrepBluePrimary
+                            )
+                            Text(
+                                text = " • ${planCalc.targetDays}d Plan",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Notification Icon
+                    Surface(
+                        shape = CircleShape,
+                        color = PrepSurfaceVariant,
+                        modifier = Modifier
+                            .size(38.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Notifications,
+                                contentDescription = "Notifications",
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    // Reset & Reload Syllabus Button
+                    Surface(
+                        shape = CircleShape,
+                        color = PrepSurfaceVariant,
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clickable { showResetDialog = true }
+                            .testTag("dashboard_reset_syllabus_button")
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Reset & Reload Syllabus",
+                                tint = PrepBluePrimary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    // Switch Exam Goal Button
+                    Surface(
+                        shape = CircleShape,
+                        color = PrepBluePrimary,
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clickable { viewModel.navigateTo(AppScreen.OnboardingSelectGoal) }
+                            .testTag("dashboard_switch_goal_button")
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Switch Goal",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Today's Progress Card (Figure Layout)
+        item {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 12.dp),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = PrepBlueLight),
-                elevation = CardDefaults.cardElevation(0.dp)
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(containerColor = PrepSurface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, PrepBorder)
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(18.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "$greeting, Scholar",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                            color = PrepBlueDark
-                        )
-                        Text(
-                            text = "${activeGoal?.examName ?: "PREP TRACK"} (${activeGoal?.targetYear ?: "Target"})",
-                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold),
-                            color = PrepBluePrimary
-                        )
-                        Text(
-                            text = "${planCalc.targetDays} days plan • ${planCalc.playbackSpeed}× speed",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                Column(modifier = Modifier.padding(18.dp)) {
+                    Text(
+                        text = "Today's Progress",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
 
-                    // Streak Badge
-                    Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = Color.White,
-                        shadowElevation = 1.dp
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                        // Circular Progress Ring
+                        ProgressRing(
+                            progress = todayProgress.progressFraction,
+                            modifier = Modifier.size(76.dp),
+                            strokeWidth = 8.dp,
+                            progressColor = if (todayProgress.isGoalAchieved) PrepSuccess else PrepBluePrimary,
+                            backgroundColor = PrepSurfaceVariant
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.LocalFireDepartment,
-                                    contentDescription = "Streak",
-                                    tint = PrepStreakOrange,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(2.dp))
-                                Text(
-                                    text = "${userStreak?.currentStreak ?: 1}",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp,
-                                    color = PrepStreakOrange
-                                )
-                            }
                             Text(
-                                text = "Day Streak",
-                                fontSize = 10.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                text = "${(todayProgress.progressFraction * 100).toInt()}%",
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 16.sp,
+                                color = if (todayProgress.isGoalAchieved) PrepSuccess else PrepBluePrimary
                             )
                         }
+
+                        Spacer(modifier = Modifier.width(18.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "${todayProgress.completedLectures}/${todayProgress.totalTasks} Tasks Done",
+                                style = MaterialTheme.typography.headlineSmall.copy(
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 20.sp
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(3.dp))
+                            Text(
+                                text = "Required Workload: ${planCalc.dailyWorkloadFormatted}",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = PrepBluePrimary
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Completed: ${todayProgress.completedWorkloadFormatted} • Left: ${todayProgress.remainingWorkloadFormatted}",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (todayProgress.isGoalAchieved) PrepSuccess else MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Target: ${planCalc.dailyLecturesRequired} lectures/day (${planCalc.targetDays}d target)",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            if (todayProgress.isGoalAchieved) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "🎉 Today's Required Goal Completed!",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = PrepSuccess
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3 Metric Pills (Day Streak, Total Lectures, Syllabus %)
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // Streak Pill
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = PrepSurface,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, PrepBorder),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(vertical = 12.dp, horizontal = 6.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.LocalFireDepartment, contentDescription = null, tint = PrepStreakOrange, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(text = "${userStreak?.currentStreak ?: 1}", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(text = "Day Streak", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+
+                // Total Lectures Pill
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = PrepSurface,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, PrepBorder),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(vertical = 12.dp, horizontal = 6.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.School, contentDescription = null, tint = PrepBluePrimary, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(text = "${planCalc.completedLectures}/${planCalc.totalLectures}", fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(text = "Total Lectures", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+
+                // Syllabus Pill
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = PrepSurface,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, PrepBorder),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(vertical = 12.dp, horizontal = 6.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        val sylPercent = if (planCalc.totalLectures > 0) (planCalc.completedLectures * 100 / planCalc.totalLectures) else 0
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.Speed, contentDescription = null, tint = PrepSuccess, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(text = "$sylPercent%", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(text = "Syllabus", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -220,92 +430,6 @@ fun DashboardScreen(
                                 Text("Dismiss", fontSize = 11.sp)
                             }
                         }
-                    }
-                }
-            }
-        }
-
-        // Today's Plan & Workload Summary Card
-        item {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 12.dp),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(modifier = Modifier.padding(18.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "TODAY'S PLAN",
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 1.sp
-                                ),
-                                color = PrepBluePrimary
-                            )
-                            Text(
-                                text = "Required Workload: ${planCalc.dailyWorkloadFormatted}",
-                                style = MaterialTheme.typography.titleLarge.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 22.sp
-                                ),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-
-                        // Circular Progress Ring
-                        ProgressRing(
-                            progress = dailyProgressFraction,
-                            modifier = Modifier.size(68.dp),
-                            strokeWidth = 7.dp,
-                            progressColor = PrepBluePrimary,
-                            backgroundColor = PrepBlueLight
-                        ) {
-                            Text(
-                                text = "${(dailyProgressFraction * 100).toInt()}%",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp,
-                                color = PrepBluePrimary
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    // Workload Metrics Grid
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        WorkloadPill(
-                            icon = Icons.Default.Speed,
-                            title = "Lectures",
-                            value = "$completedLecturesToday / ${if (totalLecturesToday == 0) planCalc.totalLectures.coerceAtMost(4) else totalLecturesToday}"
-                        )
-                        WorkloadPill(
-                            icon = Icons.Default.EditNote,
-                            title = "Notes",
-                            value = "${planCalc.notesMinutesPerLecture}m/lec"
-                        )
-                        WorkloadPill(
-                            icon = Icons.Default.FitnessCenter,
-                            title = "Practice",
-                            value = "${planCalc.dailyPracticeMinutes}m"
-                        )
-                        WorkloadPill(
-                            icon = Icons.Default.Timer,
-                            title = "Revision",
-                            value = "${planCalc.dailyRevisionMinutes}m"
-                        )
                     }
                 }
             }
@@ -389,9 +513,9 @@ fun DashboardScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "$completedLecturesToday / $totalLecturesToday Done",
+                    text = "${todayProgress.completedLectures} / ${todayProgress.totalTasks} Done",
                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                    color = if (completedLecturesToday == totalLecturesToday && totalLecturesToday > 0) PrepSuccess else PrepBluePrimary
+                    color = if (todayProgress.isGoalAchieved) PrepSuccess else PrepBluePrimary
                 )
             }
         }
@@ -477,6 +601,73 @@ fun DashboardScreen(
         item {
             Spacer(modifier = Modifier.height(24.dp))
         }
+    }
+
+    if (showResetDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetDialog = false },
+            title = {
+                Text(
+                    text = "Reset & Reload Syllabus",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "Current Exam: ${activeGoal?.examName ?: "Syllabus"}",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = PrepBluePrimary
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "Choose how you want to reset your prep:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Button(
+                        onClick = {
+                            viewModel.resetAndReloadSyllabus()
+                            showResetDialog = false
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = PrepBluePrimary),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Reload Clean Default Syllabus")
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = {
+                            viewModel.resetAllProgress()
+                            showResetDialog = false
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Reset All Progress (Start Fresh 0%)")
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = {
+                            showResetDialog = false
+                            viewModel.navigateTo(AppScreen.OnboardingSelectGoal)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Switch Exam / Change Goal")
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showResetDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 

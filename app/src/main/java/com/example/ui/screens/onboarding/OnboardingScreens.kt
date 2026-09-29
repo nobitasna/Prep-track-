@@ -16,12 +16,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.School
@@ -31,13 +34,19 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -56,7 +65,11 @@ import com.example.ui.theme.PrepBlueDark
 import com.example.ui.theme.PrepBlueLight
 import com.example.ui.theme.PrepBluePrimary
 import com.example.ui.theme.PrepStreakOrange
+import com.example.ui.theme.PrepSuccess
 import com.example.viewmodel.MainViewModel
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 @Composable
 fun OnboardingWelcomeScreen(
@@ -185,7 +198,16 @@ fun OnboardingSelectGoalScreen(
     var selectedExamName by remember { mutableStateOf("NEET") }
     var selectedYear by remember { mutableStateOf("2027") }
     var customExamNameInput by remember { mutableStateOf("") }
-    var targetDays by remember { mutableStateOf(90) }
+
+    // Target Deadline Mode: "DAYS" or "CALENDAR"
+    var deadlineMode by remember { mutableStateOf("DAYS") }
+    var targetDays by remember { mutableIntStateOf(90) }
+    var customDaysInput by remember { mutableStateOf("63") }
+
+    // Calendar Picker State
+    var targetYear by remember { mutableIntStateOf(2027) }
+    var targetMonth by remember { mutableIntStateOf(3) } // 0=Jan, 3=Apr
+    var targetDay by remember { mutableIntStateOf(27) }
 
     val categories = DefaultSyllabusCatalog.categories
 
@@ -193,93 +215,103 @@ fun OnboardingSelectGoalScreen(
         DefaultSyllabusCatalog.getTemplatesForCategory(selectedCategory)
     }
 
+    // Compute target timestamp & days
+    val targetTimestampAndDays by remember(deadlineMode, targetDays, targetYear, targetMonth, targetDay) {
+        derivedStateOf {
+            val now = Calendar.getInstance()
+            if (deadlineMode == "CALENDAR") {
+                val cal = Calendar.getInstance().apply {
+                    set(Calendar.YEAR, targetYear)
+                    set(Calendar.MONTH, targetMonth)
+                    set(Calendar.DAY_OF_MONTH, targetDay)
+                    set(Calendar.HOUR_OF_DAY, 23)
+                    set(Calendar.MINUTE, 59)
+                    set(Calendar.SECOND, 59)
+                }
+                val diffDays = ((cal.timeInMillis - now.timeInMillis) / (1000 * 60 * 60 * 24)).toInt().coerceAtLeast(1)
+                Pair(cal.timeInMillis, diffDays)
+            } else {
+                val cal = Calendar.getInstance().apply {
+                    add(Calendar.DAY_OF_YEAR, targetDays)
+                }
+                Pair(cal.timeInMillis, targetDays)
+            }
+        }
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 20.dp),
-        contentPadding = PaddingValues(top = 36.dp, bottom = 48.dp)
+            .padding(horizontal = 18.dp),
+        contentPadding = PaddingValues(top = 28.dp, bottom = 48.dp)
     ) {
         item {
             Text(
-                text = "What are you preparing for?",
+                text = "Select Your Target Goal",
                 style = MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 26.sp
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 25.sp
                 ),
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = "Select your goal to automatically load a pre-built default syllabus.",
+                text = "Choose your board or competitive exam to instantly load complete subjects & chapter syllabi.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 6.dp, bottom = 20.dp)
+                modifier = Modifier.padding(top = 4.dp, bottom = 18.dp)
             )
         }
 
+        // Category Pills (Horizontal Scroll)
         item {
             Text(
-                text = "SELECT CATEGORY",
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                text = "1. EXAM CATEGORY",
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
                 color = PrepBluePrimary,
-                modifier = Modifier.padding(bottom = 10.dp)
+                modifier = Modifier.padding(bottom = 8.dp)
             )
-        }
 
-        items(categories) { category ->
-            val isSelected = category == selectedCategory
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp)
-                    .clickable {
-                        selectedCategory = category
-                        val templates = DefaultSyllabusCatalog.getTemplatesForCategory(category)
-                        if (templates.isNotEmpty()) {
-                            selectedExamName = templates.first().examName
-                            selectedYear = templates.first().availableYears.firstOrNull() ?: "2027"
-                        } else {
-                            selectedExamName = "Custom Exam"
-                            selectedYear = "2027"
-                        }
-                    }
-                    .testTag("category_card_${category.replace(" ", "_")}"),
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (isSelected) PrepBlueLight else MaterialTheme.colorScheme.surface
-                ),
-                border = if (isSelected) androidx.compose.foundation.BorderStroke(1.5.dp, PrepBluePrimary) else null
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = category,
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                        ),
-                        color = if (isSelected) PrepBluePrimary else MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f)
-                    )
-                    if (isSelected) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Selected",
-                            tint = PrepBluePrimary
+                items(categories) { category ->
+                    val isSelected = category == selectedCategory
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) PrepBluePrimary else PrepBlueLight,
+                        modifier = Modifier
+                            .clickable {
+                                selectedCategory = category
+                                val templates = DefaultSyllabusCatalog.getTemplatesForCategory(category)
+                                if (templates.isNotEmpty()) {
+                                    selectedExamName = templates.first().examName
+                                    selectedYear = templates.first().availableYears.firstOrNull() ?: "2027"
+                                } else {
+                                    selectedExamName = "Custom Exam"
+                                    selectedYear = "2027"
+                                }
+                            }
+                            .testTag("category_pill_${category.replace(" ", "_")}")
+                    ) {
+                        Text(
+                            text = category,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isSelected) Color.White else PrepBlueDark,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
                         )
                     }
                 }
             }
         }
 
+        // Available Exams in the chosen category
         item {
-            Spacer(modifier = Modifier.height(20.dp))
             Text(
-                text = "EXAM / CLASS",
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                text = "2. CHOOSE EXAM / CLASS (${availableTemplates.size} Available)",
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
                 color = PrepBluePrimary,
                 modifier = Modifier.padding(bottom = 10.dp)
             )
@@ -291,51 +323,86 @@ fun OnboardingSelectGoalScreen(
                         customExamNameInput = it
                         selectedExamName = if (it.isNotBlank()) it else "Custom Exam"
                     },
-                    label = { Text("Enter Exam / Goal Name") },
-                    placeholder = { Text("e.g. CFA Level 1, SAT 2027, etc.") },
+                    label = { Text("Enter Exam or Goal Name") },
+                    placeholder = { Text("e.g. State PSC, MBA CET, Olympiad, etc.") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 )
             } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     availableTemplates.forEach { template ->
                         val isChosen = template.examName == selectedExamName
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = if (isChosen) PrepBluePrimary else MaterialTheme.colorScheme.surface,
-                            border = if (!isChosen) androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFCBD5E1)) else null,
+                        Card(
                             modifier = Modifier
-                                .weight(1f)
+                                .fillMaxWidth()
                                 .clickable {
                                     selectedExamName = template.examName
                                     selectedYear = template.availableYears.firstOrNull() ?: "2027"
                                 }
+                                .testTag("exam_card_${template.examName.replace(" ", "_")}"),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isChosen) PrepBlueLight else MaterialTheme.colorScheme.surface
+                            ),
+                            border = if (isChosen) androidx.compose.foundation.BorderStroke(1.5.dp, PrepBluePrimary) else null,
+                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                         ) {
-                            Text(
-                                text = template.examName,
-                                textAlign = TextAlign.Center,
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Medium
-                                ),
-                                color = if (isChosen) Color.White else MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.padding(vertical = 12.dp, horizontal = 8.dp)
-                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(if (isChosen) PrepBluePrimary else Color(0xFFE2E8F0)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.School,
+                                        contentDescription = null,
+                                        tint = if (isChosen) Color.White else Color(0xFF64748B),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = template.examName,
+                                        fontWeight = if (isChosen) FontWeight.Bold else FontWeight.SemiBold,
+                                        fontSize = 15.sp,
+                                        color = if (isChosen) PrepBluePrimary else MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "${template.subjects.size} Subjects • ${template.subjects.sumOf { it.chapters.size }} Chapters (${template.subjects.joinToString { it.name.take(10) }})",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                if (isChosen) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Selected",
+                                        tint = PrepBluePrimary
+                                    )
+                                }
+                            }
                         }
                     }
                 }
             }
         }
 
+        // Session / Year Selection
         item {
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(18.dp))
             Text(
-                text = "TARGET YEAR / SESSION",
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                text = "3. TARGET SESSION / YEAR",
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
                 color = PrepBluePrimary,
-                modifier = Modifier.padding(bottom = 10.dp)
+                modifier = Modifier.padding(bottom = 8.dp)
             )
 
             val currentTemplate = availableTemplates.find { it.examName == selectedExamName }
@@ -361,37 +428,262 @@ fun OnboardingSelectGoalScreen(
             }
         }
 
+        // Completion Deadline Target: Days OR Calendar Date Option
         item {
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(18.dp))
             Text(
-                text = "COMPLETION TARGET",
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                text = "4. COMPLETION DEADLINE TARGET",
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
                 color = PrepBluePrimary,
-                modifier = Modifier.padding(bottom = 10.dp)
+                modifier = Modifier.padding(bottom = 8.dp)
             )
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(60, 90, 120, 180).forEach { days ->
-                    val isChosen = targetDays == days
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = if (isChosen) PrepBluePrimary else MaterialTheme.colorScheme.surface,
-                        border = if (!isChosen) androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFCBD5E1)) else null,
-                        modifier = Modifier.clickable { targetDays = days }
+            // Switch between Days vs Calendar Date
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (deadlineMode == "DAYS") PrepBluePrimary else PrepBlueLight,
+                    modifier = Modifier.weight(1f).clickable { deadlineMode = "DAYS" }
+                ) {
+                    Text(
+                        text = "Days Target",
+                        fontWeight = if (deadlineMode == "DAYS") FontWeight.Bold else FontWeight.Medium,
+                        color = if (deadlineMode == "DAYS") Color.White else PrepBlueDark,
+                        fontSize = 13.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(vertical = 10.dp)
+                    )
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (deadlineMode == "CALENDAR") PrepBluePrimary else PrepBlueLight,
+                    modifier = Modifier.weight(1f).clickable { deadlineMode = "CALENDAR" }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(vertical = 10.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Icon(
+                            imageVector = Icons.Default.CalendarMonth,
+                            contentDescription = null,
+                            tint = if (deadlineMode == "CALENDAR") Color.White else PrepBlueDark,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "$days Days",
-                            fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isChosen) Color.White else MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+                            text = "Calendar Date",
+                            fontWeight = if (deadlineMode == "CALENDAR") FontWeight.Bold else FontWeight.Medium,
+                            color = if (deadlineMode == "CALENDAR") Color.White else PrepBlueDark,
+                            fontSize = 13.sp
                         )
                     }
                 }
             }
+
+            if (deadlineMode == "DAYS") {
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(1.dp)
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            listOf(30, 45, 60, 63, 90, 120, 180).forEach { days ->
+                                val isChosen = targetDays == days
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isChosen) PrepBluePrimary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    modifier = Modifier.weight(1f).clickable { targetDays = days }
+                                ) {
+                                    Text(
+                                        text = "${days}d",
+                                        fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isChosen) Color.White else MaterialTheme.colorScheme.onSurface,
+                                        fontSize = 12.sp,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(vertical = 8.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            OutlinedTextField(
+                                value = customDaysInput,
+                                onValueChange = {
+                                    customDaysInput = it.filter { c -> c.isDigit() }
+                                    val parsed = customDaysInput.toIntOrNull()
+                                    if (parsed != null && parsed > 0) {
+                                        targetDays = parsed
+                                    }
+                                },
+                                label = { Text("Or enter exact days (e.g. 63)") },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                        }
+                    }
+                }
+            } else {
+                // Calendar Date Picker (Exact Date Selector e.g. 27 April 2027)
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(1.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Pick Target Date",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Year Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            listOf(2026, 2027, 2028, 2029).forEach { y ->
+                                val isChosen = targetYear == y
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isChosen) PrepBluePrimary else PrepBlueLight,
+                                    modifier = Modifier.weight(1f).clickable { targetYear = y }
+                                ) {
+                                    Text(
+                                        text = "$y",
+                                        fontSize = 12.sp,
+                                        fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isChosen) Color.White else PrepBlueDark,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(vertical = 8.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Month Row (12 Months in 2 rows)
+                        val months = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            months.take(6).forEachIndexed { index, mName ->
+                                val isChosen = targetMonth == index
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = if (isChosen) PrepBluePrimary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    modifier = Modifier.weight(1f).clickable { targetMonth = index }
+                                ) {
+                                    Text(
+                                        text = mName,
+                                        fontSize = 11.sp,
+                                        fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isChosen) Color.White else MaterialTheme.colorScheme.onSurface,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(vertical = 6.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            months.drop(6).forEachIndexed { index, mName ->
+                                val realIndex = index + 6
+                                val isChosen = targetMonth == realIndex
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = if (isChosen) PrepBluePrimary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    modifier = Modifier.weight(1f).clickable { targetMonth = realIndex }
+                                ) {
+                                    Text(
+                                        text = mName,
+                                        fontSize = 11.sp,
+                                        fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isChosen) Color.White else MaterialTheme.colorScheme.onSurface,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(vertical = 6.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Day Row Quick Selectors
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            listOf(1, 10, 15, 20, 27, 30).forEach { d ->
+                                val isChosen = targetDay == d
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isChosen) PrepBluePrimary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    modifier = Modifier.weight(1f).clickable { targetDay = d }
+                                ) {
+                                    Text(
+                                        text = "$d",
+                                        fontSize = 12.sp,
+                                        fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isChosen) Color.White else MaterialTheme.colorScheme.onSurface,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(vertical = 6.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Target Summary Pill
+            val (calculatedTimestamp, computedDays) = targetTimestampAndDays
+            val dateFmt = SimpleDateFormat("dd MMMM yyyy", Locale.getDefault()).format(calculatedTimestamp)
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = Color(0xFFEFF6FF),
+                modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(imageVector = Icons.Default.DateRange, contentDescription = null, tint = PrepBluePrimary, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "📅 Target Date: $dateFmt • $computedDays Days Remaining",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = PrepBluePrimary
+                    )
+                }
+            }
         }
 
+        // Action Button
         item {
-            Spacer(modifier = Modifier.height(36.dp))
+            Spacer(modifier = Modifier.height(30.dp))
+
+            val (finalTimestamp, finalDays) = targetTimestampAndDays
 
             Button(
                 onClick = {
@@ -400,7 +692,13 @@ fun OnboardingSelectGoalScreen(
                     } else {
                         selectedExamName
                     }
-                    viewModel.completeOnboarding(selectedCategory, finalName, selectedYear, targetDays)
+                    viewModel.completeOnboarding(
+                        category = selectedCategory,
+                        examName = finalName,
+                        year = selectedYear,
+                        days = finalDays,
+                        customTargetTimestamp = finalTimestamp
+                    )
                     onComplete()
                 },
                 modifier = Modifier
@@ -411,7 +709,7 @@ fun OnboardingSelectGoalScreen(
                 colors = ButtonDefaults.buttonColors(containerColor = PrepBluePrimary)
             ) {
                 Text(
-                    text = "Load Syllabus & Create Plan",
+                    text = "Load Syllabus & Start Tracking ($finalDays Days)",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
