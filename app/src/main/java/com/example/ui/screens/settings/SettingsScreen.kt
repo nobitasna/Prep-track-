@@ -1,5 +1,11 @@
 package com.example.ui.screens.settings
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,17 +26,19 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
-import androidx.compose.material3.OutlinedButton
-import com.example.ui.theme.PrepCyanSecondary
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -42,7 +50,9 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -57,16 +67,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.data.security.ActivationKeySecurity
+import com.example.ui.screens.subscription.ActivationKeyDialog
 import com.example.ui.theme.PrepBlueDark
 import com.example.ui.theme.PrepBlueLight
 import com.example.ui.theme.PrepBluePrimary
+import com.example.ui.theme.PrepCyanSecondary
 import com.example.ui.theme.PrepSuccess
 import com.example.viewmodel.AppScreen
 import com.example.viewmodel.MainViewModel
@@ -77,9 +93,13 @@ fun SettingsScreen(
     viewModel: MainViewModel,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
     val activeGoal by viewModel.activeGoal.collectAsStateWithLifecycle()
     val studyPlan by viewModel.studyPlan.collectAsStateWithLifecycle()
     val userProfile by viewModel.userProfile.collectAsStateWithLifecycle()
+    val subscriptionInfo by viewModel.subscriptionInfo.collectAsStateWithLifecycle()
+
+    var showUpgradeDialog by remember { mutableStateOf(false) }
 
     var studyReminderEnabled by remember { mutableStateOf(true) }
     var streakAlertsEnabled by remember { mutableStateOf(true) }
@@ -215,6 +235,173 @@ fun SettingsScreen(
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFEE2E2))
                             ) {
                                 Text("Sign Out", color = Color(0xFFDC2626), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ==========================================
+            // MEMBERSHIP & LICENSE STATUS (TRIAL / PRO)
+            // ==========================================
+            item {
+                Text(
+                    text = "MEMBERSHIP & LICENSE",
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
+                )
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 14.dp)
+                        .testTag("settings_membership_card"),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(
+                        1.2.dp,
+                        if (subscriptionInfo.isPro) Color(0xFFFBBF24).copy(alpha = 0.5f)
+                        else if (subscriptionInfo.isTrialActive) PrepCyanSecondary.copy(alpha = 0.4f)
+                        else Color(0xFFEF4444).copy(alpha = 0.5f)
+                    ),
+                    elevation = CardDefaults.cardElevation(2.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            if (subscriptionInfo.isPro) Color(0xFFFBBF24).copy(alpha = 0.2f)
+                                            else if (subscriptionInfo.isTrialActive) PrepCyanSecondary.copy(alpha = 0.15f)
+                                            else Color(0xFFEF4444).copy(alpha = 0.18f)
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = if (subscriptionInfo.isPro) Icons.Default.Star
+                                        else if (subscriptionInfo.isTrialActive) Icons.Default.Timer
+                                        else Icons.Default.Lock,
+                                        contentDescription = null,
+                                        tint = if (subscriptionInfo.isPro) Color(0xFFFBBF24)
+                                        else if (subscriptionInfo.isTrialActive) PrepCyanSecondary
+                                        else Color(0xFFEF4444),
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = if (subscriptionInfo.isPro) "Prep Track Pro"
+                                        else if (subscriptionInfo.isTrialActive) "3-Day Free Trial"
+                                        else "Trial Expired",
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                                    )
+                                    Text(
+                                        text = if (subscriptionInfo.isPro) "Active • Lifetime License"
+                                        else if (subscriptionInfo.isTrialActive) "${subscriptionInfo.trialRemainingFormatted} remaining"
+                                        else "Upgrade required to unlock features",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = if (subscriptionInfo.isPro) Color(0xFFFBBF24)
+                                        else if (subscriptionInfo.isTrialActive) PrepCyanSecondary
+                                        else Color(0xFFEF4444)
+                                    )
+                                }
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (subscriptionInfo.isPro) Color(0xFFFBBF24).copy(alpha = 0.18f)
+                                else if (subscriptionInfo.isTrialActive) PrepCyanSecondary.copy(alpha = 0.15f)
+                                else Color(0xFFEF4444).copy(alpha = 0.18f)
+                            ) {
+                                Text(
+                                    text = if (subscriptionInfo.isPro) "PRO"
+                                    else if (subscriptionInfo.isTrialActive) "TRIAL"
+                                    else "EXPIRED",
+                                    color = if (subscriptionInfo.isPro) Color(0xFFFBBF24)
+                                    else if (subscriptionInfo.isTrialActive) PrepCyanSecondary
+                                    else Color(0xFFEF4444),
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 11.sp,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // Account ID info
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.background,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Licensed ID: ",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 11.5.sp
+                                )
+                                Text(
+                                    text = subscriptionInfo.userAccountId,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.ContentCopy,
+                                    contentDescription = "Copy ID",
+                                    tint = PrepCyanSecondary,
+                                    modifier = Modifier
+                                        .size(16.dp)
+                                        .clickable {
+                                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                            clipboard.setPrimaryClip(ClipData.newPlainText("Account ID", subscriptionInfo.userAccountId))
+                                            Toast.makeText(context, "Account ID copied!", Toast.LENGTH_SHORT).show()
+                                        }
+                                )
+                            }
+                        }
+
+                        if (subscriptionInfo.isPro) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text(
+                                text = "License Key: ${ActivationKeySecurity.maskKey(subscriptionInfo.activatedKey)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 11.5.sp
+                            )
+                        } else {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Button(
+                                onClick = { showUpgradeDialog = true },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(44.dp)
+                                    .testTag("settings_upgrade_pro_button"),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = PrepBluePrimary)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Key,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Upgrade to Pro with Key", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                             }
                         }
                     }
@@ -796,6 +983,14 @@ fun SettingsScreen(
                     Text("Cancel")
                 }
             }
+        )
+    }
+
+    if (showUpgradeDialog) {
+        ActivationKeyDialog(
+            userEmail = userProfile.email,
+            onDismiss = { showUpgradeDialog = false },
+            onActivateKey = { key -> viewModel.activateProWithKey(key) }
         )
     }
 }

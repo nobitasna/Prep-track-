@@ -447,11 +447,14 @@ private fun OnboardingContent(title: String, subtitle: String) {
 @Composable
 fun LoginScreen(
     onGoogleSignIn: () -> Unit,
+    onLoginWithEmail: ((String) -> Unit)? = null,
     onLoginSuccess: () -> Unit = onGoogleSignIn,
     onNavigateToSignUp: () -> Unit = onGoogleSignIn,
     onBack: (() -> Unit)? = null
 ) {
     var showGoogleAccountDialog by remember { mutableStateOf(false) }
+    var showCustomEmailDialog by remember { mutableStateOf(false) }
+    var customEmailInput by remember { mutableStateOf("") }
 
     Box(
         modifier = Modifier
@@ -779,7 +782,7 @@ fun LoginScreen(
                             .fillMaxWidth()
                             .clickable {
                                 showGoogleAccountDialog = false
-                                onGoogleSignIn()
+                                showCustomEmailDialog = true
                             }
                             .testTag("google_account_add_another")
                     ) {
@@ -816,6 +819,62 @@ fun LoginScreen(
             dismissButton = {
                 TextButton(onClick = { showGoogleAccountDialog = false }) {
                     Text("Cancel", color = PrepCyanSecondary)
+                }
+            }
+        )
+    }
+
+    if (showCustomEmailDialog) {
+        AlertDialog(
+            onDismissRequest = { showCustomEmailDialog = false },
+            title = {
+                Text(
+                    text = "Sign in with Email",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "Enter your Google account email to sign in or test another account ID:",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = customEmailInput,
+                        onValueChange = { customEmailInput = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("e.g. user@gmail.com") },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val email = customEmailInput.trim()
+                        if (email.isNotBlank()) {
+                            showCustomEmailDialog = false
+                            if (onLoginWithEmail != null) {
+                                onLoginWithEmail(email)
+                            } else {
+                                onGoogleSignIn()
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = PrepBluePrimary)
+                ) {
+                    Text("Continue")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCustomEmailDialog = false }) {
+                    Text("Cancel")
                 }
             }
         )

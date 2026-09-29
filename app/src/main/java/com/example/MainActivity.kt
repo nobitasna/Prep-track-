@@ -27,6 +27,8 @@ import com.example.ui.screens.plan.PlanScreen
 import com.example.ui.screens.settings.SettingsScreen
 import com.example.ui.screens.syllabus.ChapterDetailScreen
 import com.example.ui.screens.syllabus.SyllabusScreen
+import com.example.ui.screens.subscription.SubscriptionSelectionScreen
+import com.example.ui.screens.subscription.TrialExpiredBlockingDialog
 import com.example.ui.theme.PrepTrackTheme
 import com.example.viewmodel.AppScreen
 import com.example.viewmodel.MainViewModel
@@ -44,18 +46,19 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun PrepTrackApp(
-    viewModel: MainViewModel = viewModel()
-) {
+fun PrepTrackApp(viewModel: MainViewModel = viewModel()) {
     val currentScreen by viewModel.currentScreen.collectAsStateWithLifecycle()
     val activeGoal by viewModel.activeGoal.collectAsStateWithLifecycle()
     val userStreak by viewModel.userStreak.collectAsStateWithLifecycle()
+    val userProfile by viewModel.userProfile.collectAsStateWithLifecycle()
+    val subscriptionInfo by viewModel.subscriptionInfo.collectAsStateWithLifecycle()
 
     // Back button handling for all sub-screens
     BackHandler(enabled = currentScreen !is AppScreen.Dashboard && currentScreen !is AppScreen.Splash && currentScreen !is AppScreen.Login) {
         when (currentScreen) {
             is AppScreen.ChapterDetail -> viewModel.navigateTo(AppScreen.Syllabus)
             is AppScreen.Settings -> viewModel.navigateBack()
+            is AppScreen.SubscriptionSelection -> viewModel.navigateTo(AppScreen.Login)
             is AppScreen.OnboardingSelectGoal -> viewModel.navigateTo(AppScreen.Dashboard)
             is AppScreen.Onboarding -> viewModel.navigateTo(AppScreen.Splash)
             is AppScreen.Login -> viewModel.navigateTo(AppScreen.Onboarding)
@@ -66,6 +69,7 @@ fun PrepTrackApp(
     val showBottomBar = currentScreen !is AppScreen.Splash &&
             currentScreen !is AppScreen.Onboarding &&
             currentScreen !is AppScreen.Login &&
+            currentScreen !is AppScreen.SubscriptionSelection &&
             currentScreen !is AppScreen.OnboardingWelcome &&
             currentScreen !is AppScreen.OnboardingSelectGoal
 
@@ -98,6 +102,8 @@ fun PrepTrackApp(
                     subtitle = subtitle,
                     showBackButton = false,
                     streakCount = userStreak?.currentStreak ?: 1,
+                    subscriptionInfo = subscriptionInfo,
+                    onSubscriptionClick = { viewModel.navigateTo(AppScreen.Settings) },
                     onSettingsClick = { viewModel.navigateTo(AppScreen.Settings) }
                 )
             }
@@ -129,9 +135,23 @@ fun PrepTrackApp(
             is AppScreen.Login -> {
                 LoginScreen(
                     onGoogleSignIn = { viewModel.signInWithGoogle() },
+                    onLoginWithEmail = { email -> viewModel.loginWithEmail(email, "") },
                     onLoginSuccess = { viewModel.signInWithGoogle() },
                     onNavigateToSignUp = { viewModel.signInWithGoogle() },
                     onBack = { viewModel.navigateTo(AppScreen.Onboarding) }
+                )
+            }
+            is AppScreen.SubscriptionSelection -> {
+                SubscriptionSelectionScreen(
+                    userEmail = userProfile.email,
+                    userName = userProfile.name,
+                    onStartTrial = { viewModel.start3DayTrial() },
+                    onActivateKey = { key -> viewModel.activateProWithKey(key) },
+                    onSuccessActivated = {
+                        if (activeGoal != null) viewModel.navigateTo(AppScreen.Dashboard)
+                        else viewModel.navigateTo(AppScreen.OnboardingSelectGoal)
+                    },
+                    onBackToLogin = { viewModel.navigateTo(AppScreen.Login) }
                 )
             }
             is AppScreen.OnboardingWelcome -> {
@@ -174,5 +194,15 @@ fun PrepTrackApp(
                 )
             }
         }
+    }
+
+    // Blocking Modal when trial has expired and user has not upgraded to Pro
+    if (userProfile.isLoggedIn && subscriptionInfo.isTrialExpired && !subscriptionInfo.isPro) {
+        TrialExpiredBlockingDialog(
+            userEmail = userProfile.email,
+            onActivateKey = { key -> viewModel.activateProWithKey(key) },
+            onSignOut = { viewModel.signOut() },
+            onResetTrialForTesting = { viewModel.resetTrialForTesting() }
+        )
     }
 }

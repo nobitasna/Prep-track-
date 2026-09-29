@@ -13,8 +13,12 @@ import com.example.data.local.entity.StudyPlanEntity
 import com.example.data.local.entity.SubjectEntity
 import com.example.data.local.entity.UserStreakEntity
 import com.example.data.local.entity.WeeklyTimetableEntryEntity
+import com.example.data.model.ActivationResult
 import com.example.data.model.StudyPlanCalculation
+import com.example.data.model.SubscriptionInfo
+import com.example.data.model.SubscriptionTier
 import com.example.data.repository.PrepTrackRepository
+import com.example.data.repository.SubscriptionRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,6 +34,7 @@ sealed class AppScreen {
     object Splash : AppScreen()
     object Onboarding : AppScreen()
     object Login : AppScreen()
+    object SubscriptionSelection : AppScreen()
     object OnboardingWelcome : AppScreen()
     object OnboardingSelectGoal : AppScreen()
     object Dashboard : AppScreen()
@@ -101,6 +106,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: PrepTrackRepository
     private val authPrefs = application.getSharedPreferences("prep_track_auth", android.content.Context.MODE_PRIVATE)
+    private val subscriptionRepository = SubscriptionRepository(application)
 
     private val _userProfile = MutableStateFlow(
         UserProfile(
@@ -114,8 +120,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val isInitiallyLoggedIn = authPrefs.getBoolean("is_logged_in", false)
 
+    private val _subscriptionInfo = MutableStateFlow(
+        subscriptionRepository.getSubscription(_userProfile.value.email)
+    )
+    val subscriptionInfo: StateFlow<SubscriptionInfo> = _subscriptionInfo.asStateFlow()
+
     private val _currentScreen = MutableStateFlow<AppScreen>(
-        if (!isInitiallyLoggedIn) AppScreen.Splash else AppScreen.Dashboard
+        if (!isInitiallyLoggedIn) {
+            AppScreen.Splash
+        } else {
+            val initialSub = subscriptionRepository.getSubscription(_userProfile.value.email)
+            if (initialSub.tier == SubscriptionTier.NONE) {
+                AppScreen.SubscriptionSelection
+            } else {
+                AppScreen.Dashboard
+            }
+        }
     )
     val currentScreen: StateFlow<AppScreen> = _currentScreen.asStateFlow()
 
@@ -141,11 +161,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             .putString("user_email", email)
             .apply()
         _userProfile.value = UserProfile(name = name, email = email, isLoggedIn = true)
-        val goal = activeGoal.value
-        if (goal != null) {
-            _currentScreen.value = AppScreen.Dashboard
+
+        val sub = subscriptionRepository.getSubscription(email)
+        _subscriptionInfo.value = sub
+
+        if (sub.tier == SubscriptionTier.NONE) {
+            _currentScreen.value = AppScreen.SubscriptionSelection
         } else {
-            _currentScreen.value = AppScreen.OnboardingSelectGoal
+            val goal = activeGoal.value
+            if (goal != null) {
+                _currentScreen.value = AppScreen.Dashboard
+            } else {
+                _currentScreen.value = AppScreen.OnboardingSelectGoal
+            }
         }
     }
 
@@ -155,6 +183,54 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 .split(" ").joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
         } else "Shubh Anand"
         signInWithGoogle(name = derivedName.ifEmpty { "Shubh Anand" }, email = email.ifEmpty { "nobitanobi7209@gmail.com" })
+    }
+
+    fun start3DayTrial() {
+        val updated = subscriptionRepository.start3DayTrial(_userProfile.value.email)
+        _subscriptionInfo.value = updated
+        val goal = activeGoal.value
+        if (goal != null) {
+            _currentScreen.value = AppScreen.Dashboard
+        } else {
+            _currentScreen.value = AppScreen.OnboardingSelectGoal
+        }
+    }
+
+    fun activateProWithKey(enteredKey: String): Pair<Boolean, String> {
+        val result = subscriptionRepository.activateProWithKey(_userProfile.value.email, enteredKey)
+        return when (result) {
+            is ActivationResult.Success -> {
+                val updated = subscriptionRepository.getSubscription(_userProfile.value.email)
+                _subscriptionInfo.value = updated
+                if (_currentScreen.value is AppScreen.SubscriptionSelection) {
+                    val goal = activeGoal.value
+                    if (goal != null) {
+                        _currentScreen.value = AppScreen.Dashboard
+                    } else {
+                        _currentScreen.value = AppScreen.OnboardingSelectGoal
+                    }
+                }
+                Pair(true, "Pro activated successfully!")
+            }
+            is ActivationResult.Error -> {
+                Pair(false, result.message)
+            }
+        }
+    }
+
+    fun expireTrialForTesting() {
+        val updated = subscriptionRepository.expireTrialForTesting(_userProfile.value.email)
+        _subscriptionInfo.value = updated
+    }
+
+    fun resetTrialForTesting() {
+        val updated = subscriptionRepository.resetTrialForTesting(_userProfile.value.email)
+        _subscriptionInfo.value = updated
+        _currentScreen.value = AppScreen.SubscriptionSelection
+    }
+
+    fun refreshSubscription() {
+        _subscriptionInfo.value = subscriptionRepository.getSubscription(_userProfile.value.email)
     }
 
     fun signOut() {
@@ -169,6 +245,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         if (!isInitiallyLoggedIn) {
             _currentScreen.value = AppScreen.Splash
+        }
+
+        // Periodic ticker to auto-detect trial expiration in real time
+        viewModelScope.launch {
+            while (true) {
+                delay(30_000)
+                if (_userProfile.value.isLoggedIn) {
+                    _subscriptionInfo.value = subscriptionRepository.getSubscription(_userProfile.value.email)
+                }
+            }
         }
     }
 
