@@ -10,9 +10,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.auth.GoogleAuthManager
+import com.example.auth.GoogleAuthResult
+import kotlinx.coroutines.launch
 import com.example.ui.components.PrepTrackBottomBar
 import com.example.ui.components.PrepTrackTopBar
 import com.example.ui.screens.analytics.AnalyticsScreen
@@ -47,11 +53,16 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun PrepTrackApp(viewModel: MainViewModel = viewModel()) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val googleAuthManager = remember { GoogleAuthManager(context) }
     val currentScreen by viewModel.currentScreen.collectAsStateWithLifecycle()
     val activeGoal by viewModel.activeGoal.collectAsStateWithLifecycle()
     val userStreak by viewModel.userStreak.collectAsStateWithLifecycle()
     val userProfile by viewModel.userProfile.collectAsStateWithLifecycle()
     val subscriptionInfo by viewModel.subscriptionInfo.collectAsStateWithLifecycle()
+    val isAuthLoading by viewModel.isAuthLoading.collectAsStateWithLifecycle()
+    val authError by viewModel.authError.collectAsStateWithLifecycle()
 
     // Back button handling for all sub-screens
     BackHandler(enabled = currentScreen !is AppScreen.Dashboard && currentScreen !is AppScreen.Splash && currentScreen !is AppScreen.Login) {
@@ -134,10 +145,48 @@ fun PrepTrackApp(viewModel: MainViewModel = viewModel()) {
             }
             is AppScreen.Login -> {
                 LoginScreen(
-                    onGoogleSignIn = { viewModel.signInWithGoogle() },
+                    onGoogleSignIn = {
+                        scope.launch {
+                            when (val result = googleAuthManager.signIn()) {
+                                is GoogleAuthResult.Success -> {
+                                    viewModel.signInWithFirebaseGoogleToken(result.idToken)
+                                }
+                                is GoogleAuthResult.Cancelled -> {
+                                    viewModel.clearAuthError()
+                                }
+                                is GoogleAuthResult.NoAccountFound -> {
+                                    viewModel.setAuthError(result.message)
+                                }
+                                is GoogleAuthResult.Error -> {
+                                    viewModel.setAuthError(result.message)
+                                }
+                            }
+                        }
+                    },
+                    isLoading = isAuthLoading,
+                    errorMessage = authError,
+                    onDismissError = { viewModel.clearAuthError() },
+                    onOpenSettings = { googleAuthManager.openAddAccountSettings() },
                     onLoginWithEmail = { email -> viewModel.loginWithEmail(email, "") },
-                    onLoginSuccess = { viewModel.signInWithGoogle() },
-                    onNavigateToSignUp = { viewModel.signInWithGoogle() },
+                    onLoginSuccess = { /* Navigation handled on Firebase user authentication */ },
+                    onNavigateToSignUp = {
+                        scope.launch {
+                            when (val result = googleAuthManager.signIn()) {
+                                is GoogleAuthResult.Success -> {
+                                    viewModel.signInWithFirebaseGoogleToken(result.idToken)
+                                }
+                                is GoogleAuthResult.Cancelled -> {
+                                    viewModel.clearAuthError()
+                                }
+                                is GoogleAuthResult.NoAccountFound -> {
+                                    viewModel.setAuthError(result.message)
+                                }
+                                is GoogleAuthResult.Error -> {
+                                    viewModel.setAuthError(result.message)
+                                }
+                            }
+                        }
+                    },
                     onBack = { viewModel.navigateTo(AppScreen.Onboarding) }
                 )
             }

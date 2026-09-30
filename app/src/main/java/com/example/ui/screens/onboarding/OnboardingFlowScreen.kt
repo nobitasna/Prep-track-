@@ -447,12 +447,15 @@ private fun OnboardingContent(title: String, subtitle: String) {
 @Composable
 fun LoginScreen(
     onGoogleSignIn: () -> Unit,
+    isLoading: Boolean = false,
+    errorMessage: String? = null,
+    onDismissError: () -> Unit = {},
+    onOpenSettings: (() -> Unit)? = null,
     onLoginWithEmail: ((String) -> Unit)? = null,
     onLoginSuccess: () -> Unit = onGoogleSignIn,
     onNavigateToSignUp: () -> Unit = onGoogleSignIn,
     onBack: (() -> Unit)? = null
 ) {
-    var showGoogleAccountDialog by remember { mutableStateOf(false) }
     var showCustomEmailDialog by remember { mutableStateOf(false) }
     var customEmailInput by remember { mutableStateOf("") }
 
@@ -648,6 +651,66 @@ fun LoginScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
+                    // Error Display (if authentication failed)
+                    AnimatedVisibility(
+                        visible = !errorMessage.isNullOrBlank(),
+                        enter = fadeIn(),
+                        exit = fadeOut()
+                    ) {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 14.dp)
+                                .testTag("login_error_banner"),
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0x33EF4444),
+                            border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.6f))
+                        ) {
+                            Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "⚠️ ${errorMessage ?: ""}",
+                                        color = Color(0xFFFCA5A5),
+                                        fontSize = 12.5.sp,
+                                        lineHeight = 16.sp,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "✕",
+                                        color = Color(0xFFFCA5A5),
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier
+                                            .clip(CircleShape)
+                                            .clickable { onDismissError() }
+                                            .padding(4.dp)
+                                    )
+                                }
+                                if (onOpenSettings != null && (errorMessage?.contains("Settings", ignoreCase = true) == true || errorMessage?.contains("Google account", ignoreCase = true) == true)) {
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    Surface(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .clickable { onOpenSettings() },
+                                        color = Color(0xFFEF4444).copy(alpha = 0.25f),
+                                        border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.5f))
+                                    ) {
+                                        Text(
+                                            text = "⚙️ Open Android Settings to Add Account",
+                                            color = Color.White,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     // ==========================================
                     // SOLE LOGIN BUTTON: CONTINUE WITH GOOGLE
                     // ==========================================
@@ -656,7 +719,7 @@ fun LoginScreen(
                             .fillMaxWidth()
                             .height(54.dp)
                             .clip(RoundedCornerShape(16.dp))
-                            .clickable { showGoogleAccountDialog = true }
+                            .clickable(enabled = !isLoading) { onGoogleSignIn() }
                             .testTag("login_google_sign_in_button"),
                         shape = RoundedCornerShape(16.dp),
                         color = Color.White,
@@ -667,14 +730,29 @@ fun LoginScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center
                         ) {
-                            GoogleMultiColorGIcon(modifier = Modifier.size(24.dp))
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = "Sign in with Google",
-                                color = Color(0xFF1F2937),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp
-                            )
+                            if (isLoading) {
+                                androidx.compose.material3.CircularProgressIndicator(
+                                    modifier = Modifier.size(22.dp),
+                                    color = Color(0xFF1F2937),
+                                    strokeWidth = 2.5.dp
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = "Signing in with Google...",
+                                    color = Color(0xFF1F2937),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp
+                                )
+                            } else {
+                                GoogleMultiColorGIcon(modifier = Modifier.size(24.dp))
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = "Sign in with Google",
+                                    color = Color(0xFF1F2937),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp
+                                )
+                            }
                         }
                     }
 
@@ -695,133 +773,6 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(36.dp))
         }
-    }
-
-    // Interactive Google Account Chooser Dialog
-    if (showGoogleAccountDialog) {
-        AlertDialog(
-            onDismissRequest = { showGoogleAccountDialog = false },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    GoogleMultiColorGIcon(modifier = Modifier.size(26.dp))
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = "Sign in with Google",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                    )
-                }
-            },
-            text = {
-                Column {
-                    Text(
-                        text = "Choose an account to continue to PREP TRACK",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Primary Account Card (nobitanobi7209@gmail.com / Shubh Anand)
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = PrepSurfaceVariant,
-                        border = BorderStroke(1.dp, PrepBluePrimary.copy(alpha = 0.5f)),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                showGoogleAccountDialog = false
-                                onGoogleSignIn()
-                            }
-                            .testTag("google_account_shubh_anand")
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(44.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        Brush.linearGradient(
-                                            listOf(PrepBluePrimary, PrepBlueDark)
-                                        )
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "S",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 19.sp
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text(
-                                    text = "Shubh Anand",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.5.sp,
-                                    color = Color.White
-                                )
-                                Text(
-                                    text = "nobitanobi7209@gmail.com",
-                                    fontSize = 12.sp,
-                                    color = Color(0xFFB0B9C8)
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    // Secondary Account / Add Another Option
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = PrepSurfaceVariant.copy(alpha = 0.6f),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                showGoogleAccountDialog = false
-                                showCustomEmailDialog = true
-                            }
-                            .testTag("google_account_add_another")
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(44.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFF334155)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "+",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 20.sp
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = "Use another Google Account",
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 13.5.sp,
-                                color = Color.White
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { showGoogleAccountDialog = false }) {
-                    Text("Cancel", color = PrepCyanSecondary)
-                }
-            }
-        )
     }
 
     if (showCustomEmailDialog) {

@@ -597,7 +597,7 @@ fun LoginScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp)
-                    .clickable { showGoogleAccountDialog = true }
+                    .clickable { onGoogleSignIn() }
                     .testTag("google_sign_in_button"),
                 shape = RoundedCornerShape(14.dp),
                 color = Color.White,
@@ -641,139 +641,9 @@ fun LoginScreen(
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     color = PrepBluePrimary,
-                    modifier = Modifier.clickable { showGoogleAccountDialog = true }
+                    modifier = Modifier.clickable { onGoogleSignIn() }
                 )
             }
-        }
-
-        // ==========================================
-        // Authentic Google Account Picker Dialog
-        // ==========================================
-        if (showGoogleAccountDialog) {
-            AlertDialog(
-                onDismissRequest = { showGoogleAccountDialog = false },
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_google_logo),
-                            contentDescription = "Google",
-                            tint = Color.Unspecified,
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = "Sign in with Google",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                },
-                text = {
-                    Column {
-                        Text(
-                            text = "Choose an account to continue to Prep Track:",
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        // Account Option: Shubh Anand (Primary User Account)
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    showGoogleAccountDialog = false
-                                    viewModel?.signInWithGoogle(name = "Shubh Anand", email = "nobitanobi7209@gmail.com")
-                                    onLoginSuccess()
-                                },
-                            shape = RoundedCornerShape(12.dp),
-                            color = PrepSurfaceVariant
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(38.dp)
-                                        .clip(CircleShape)
-                                        .background(PrepBluePrimary),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "S",
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White,
-                                        fontSize = 16.sp
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        text = "Shubh Anand",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp,
-                                        color = Color.White
-                                    )
-                                    Text(
-                                        text = "nobitanobi7209@gmail.com",
-                                        fontSize = 12.sp,
-                                        color = Color(0xFF94A3B8)
-                                    )
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        // Custom / Add another account
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    showGoogleAccountDialog = false
-                                    viewModel?.signInWithGoogle(name = "Scholar Student", email = "student@gmail.com")
-                                    onLoginSuccess()
-                                },
-                            shape = RoundedCornerShape(12.dp),
-                            color = PrepSurfaceVariant
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(38.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFF334155)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "+",
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White,
-                                        fontSize = 18.sp
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = "Use another Google account",
-                                    fontSize = 13.sp,
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                        }
-                    }
-                },
-                confirmButton = {},
-                dismissButton = {
-                    TextButton(onClick = { showGoogleAccountDialog = false }) {
-                        Text("Cancel", color = PrepBluePrimary)
-                    }
-                }
-            )
         }
     }
 }

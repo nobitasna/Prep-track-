@@ -214,7 +214,7 @@ fun SettingsScreen(
                         ) {
                             OutlinedButton(
                                 onClick = {
-                                    viewModel.signInWithGoogle()
+                                    viewModel.signOut()
                                 },
                                 modifier = Modifier
                                     .weight(1f)

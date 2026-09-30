@@ -119,7 +119,7 @@ fun DashboardScreen(
                 hour < 17 -> "Good Afternoon"
                 else -> "Good Evening"
             }
-            val firstName = userProfile.name.split(" ").firstOrNull()?.ifEmpty { "Shubh" } ?: "Shubh"
+            val firstName = userProfile.name.trim().split(" ").firstOrNull()?.ifEmpty { "Scholar" } ?: "Scholar"
 
             Row(
                 modifier = Modifier

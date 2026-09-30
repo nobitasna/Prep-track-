@@ -19,6 +19,8 @@ import com.example.data.model.SubscriptionInfo
 import com.example.data.model.SubscriptionTier
 import com.example.data.repository.PrepTrackRepository
 import com.example.data.repository.SubscriptionRepository
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,7 +30,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.Calendar
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 sealed class AppScreen {
     object Splash : AppScreen()
@@ -47,9 +52,10 @@ sealed class AppScreen {
 }
 
 data class UserProfile(
-    val name: String = "Shubh Anand",
-    val email: String = "nobitanobi7209@gmail.com",
+    val name: String = "",
+    val email: String = "",
     val photoUrl: String? = null,
+    val uid: String? = null,
     val isLoggedIn: Boolean = false
 )
 
@@ -107,18 +113,53 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repository: PrepTrackRepository
     private val authPrefs = application.getSharedPreferences("prep_track_auth", android.content.Context.MODE_PRIVATE)
     private val subscriptionRepository = SubscriptionRepository(application)
+    private val firebaseAuth = FirebaseAuth.getInstance()
+    private val firebaseCurrentUser = firebaseAuth.currentUser
+
+    private val isInitiallyLoggedIn = firebaseCurrentUser != null || authPrefs.getBoolean("is_logged_in", false)
 
     private val _userProfile = MutableStateFlow(
-        UserProfile(
-            name = authPrefs.getString("user_name", "Shubh Anand") ?: "Shubh Anand",
-            email = authPrefs.getString("user_email", "nobitanobi7209@gmail.com") ?: "nobitanobi7209@gmail.com",
-            photoUrl = authPrefs.getString("user_photo", null),
-            isLoggedIn = authPrefs.getBoolean("is_logged_in", false)
-        )
+        if (firebaseCurrentUser != null) {
+            UserProfile(
+                name = firebaseCurrentUser.displayName ?: firebaseCurrentUser.email?.substringBefore("@") ?: "Student",
+                email = firebaseCurrentUser.email ?: "",
+                photoUrl = firebaseCurrentUser.photoUrl?.toString(),
+                uid = firebaseCurrentUser.uid,
+                isLoggedIn = true
+            )
+        } else if (authPrefs.getBoolean("is_logged_in", false)) {
+            UserProfile(
+                name = authPrefs.getString("user_name", "") ?: "",
+                email = authPrefs.getString("user_email", "") ?: "",
+                photoUrl = authPrefs.getString("user_photo", null),
+                uid = authPrefs.getString("user_uid", null),
+                isLoggedIn = true
+            )
+        } else {
+            UserProfile(
+                name = "",
+                email = "",
+                photoUrl = null,
+                uid = null,
+                isLoggedIn = false
+            )
+        }
     )
     val userProfile: StateFlow<UserProfile> = _userProfile.asStateFlow()
 
-    private val isInitiallyLoggedIn = authPrefs.getBoolean("is_logged_in", false)
+    private val _authError = MutableStateFlow<String?>(null)
+    val authError: StateFlow<String?> = _authError.asStateFlow()
+
+    private val _isAuthLoading = MutableStateFlow(false)
+    val isAuthLoading: StateFlow<Boolean> = _isAuthLoading.asStateFlow()
+
+    fun clearAuthError() {
+        _authError.value = null
+    }
+
+    fun setAuthError(message: String) {
+        _authError.value = message
+    }
 
     private val _subscriptionInfo = MutableStateFlow(
         subscriptionRepository.getSubscription(_userProfile.value.email)
@@ -152,6 +193,78 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return true
         }
         return false
+    }
+
+    /**
+     * Authenticates the Google ID token obtained from Credential Manager with Firebase Authentication.
+     * Uses real Firebase user profile (UID, email, displayName, photoUrl).
+     */
+    fun signInWithFirebaseGoogleToken(idToken: String, onComplete: ((Boolean, String?) -> Unit)? = null) {
+        _isAuthLoading.value = true
+        _authError.value = null
+        viewModelScope.launch {
+            try {
+                val credential = GoogleAuthProvider.getCredential(idToken, null)
+                val authResult = suspendCancellableCoroutine { continuation ->
+                    firebaseAuth.signInWithCredential(credential)
+                        .addOnSuccessListener { result ->
+                            if (continuation.isActive) continuation.resume(result)
+                        }
+                        .addOnFailureListener { exception ->
+                            if (continuation.isActive) continuation.resumeWithException(exception)
+                        }
+                }
+
+                val user = authResult.user
+                if (user != null) {
+                    val realName = user.displayName ?: user.email?.substringBefore("@") ?: "Student"
+                    val realEmail = user.email ?: "user@preptrack.com"
+                    val realPhoto = user.photoUrl?.toString()
+                    val realUid = user.uid
+
+                    authPrefs.edit()
+                        .putBoolean("is_logged_in", true)
+                        .putString("user_name", realName)
+                        .putString("user_email", realEmail)
+                        .putString("user_photo", realPhoto)
+                        .putString("user_uid", realUid)
+                        .apply()
+
+                    _userProfile.value = UserProfile(
+                        name = realName,
+                        email = realEmail,
+                        photoUrl = realPhoto,
+                        uid = realUid,
+                        isLoggedIn = true
+                    )
+
+                    val sub = subscriptionRepository.getSubscription(realEmail)
+                    _subscriptionInfo.value = sub
+
+                    if (sub.tier == SubscriptionTier.NONE) {
+                        _currentScreen.value = AppScreen.SubscriptionSelection
+                    } else {
+                        val goal = activeGoal.value
+                        if (goal != null) {
+                            _currentScreen.value = AppScreen.Dashboard
+                        } else {
+                            _currentScreen.value = AppScreen.OnboardingSelectGoal
+                        }
+                    }
+                    onComplete?.invoke(true, null)
+                } else {
+                    val msg = "Firebase Authentication could not retrieve user."
+                    _authError.value = msg
+                    onComplete?.invoke(false, msg)
+                }
+            } catch (e: Exception) {
+                val msg = e.localizedMessage ?: "Firebase Authentication failed."
+                _authError.value = msg
+                onComplete?.invoke(false, msg)
+            } finally {
+                _isAuthLoading.value = false
+            }
+        }
     }
 
     fun signInWithGoogle(name: String = "Shubh Anand", email: String = "nobitanobi7209@gmail.com") {
@@ -234,8 +347,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun signOut() {
-        authPrefs.edit().putBoolean("is_logged_in", false).apply()
-        _userProfile.value = _userProfile.value.copy(isLoggedIn = false)
+        try {
+            firebaseAuth.signOut()
+        } catch (_: Exception) {}
+        authPrefs.edit()
+            .putBoolean("is_logged_in", false)
+            .remove("user_name")
+            .remove("user_email")
+            .remove("user_photo")
+            .remove("user_uid")
+            .apply()
+        _userProfile.value = UserProfile(isLoggedIn = false)
         _currentScreen.value = AppScreen.Login
     }
 
