@@ -1,10 +1,14 @@
 package com.example.data.repository
 
+import com.example.data.defaultdata.DefaultSubjectTemplate
 import com.example.data.defaultdata.DefaultSyllabusCatalog
+import com.example.data.defaultdata.StreamSyllabusCatalog
 import com.example.data.local.AppDatabase
 import com.example.data.local.entity.ChapterEntity
 import com.example.data.local.entity.ExamGoalEntity
+import com.example.data.local.entity.FocusAllowedAppEntity
 import com.example.data.local.entity.FocusSessionEntity
+import com.example.data.local.entity.FocusSettingsEntity
 import com.example.data.local.entity.LectureEntity
 import com.example.data.local.entity.StudyPlanEntity
 import com.example.data.local.entity.SubjectEntity
@@ -26,6 +30,8 @@ class PrepTrackRepository(private val database: AppDatabase) {
     private val studyPlanDao = database.studyPlanDao()
     private val weeklyTimetableDao = database.weeklyTimetableDao()
     private val focusSessionDao = database.focusSessionDao()
+    private val focusSettingsDao = database.focusSettingsDao()
+    private val focusAllowedAppDao = database.focusAllowedAppDao()
     private val userStreakDao = database.userStreakDao()
 
     // Active Goal & Plans
@@ -56,7 +62,7 @@ class PrepTrackRepository(private val database: AppDatabase) {
     fun getUserStreak(): Flow<UserStreakEntity?> = userStreakDao.getStreak()
 
     /**
-     * Initializes a new user goal and copies the pre-built default syllabus into a user-owned copy.
+     * Initializes a new user goal and copies the selected/stream syllabus into a user-owned copy.
      * GLOBAL DEFAULT SYLLABUS -> USER SYLLABUS COPY -> USER CUSTOMIZATION
      */
     suspend fun initializeExamGoalWithDefaultSyllabus(
@@ -64,7 +70,11 @@ class PrepTrackRepository(private val database: AppDatabase) {
         examName: String,
         year: String,
         targetDays: Int = 90,
-        customTargetTimestamp: Long? = null
+        customTargetTimestamp: Long? = null,
+        board: String? = null,
+        stream: String? = null,
+        selectedSubjectNames: List<String>? = null,
+        customSubjects: List<DefaultSubjectTemplate> = emptyList()
     ): Long {
         examGoalDao.deactivateAllGoals()
 
@@ -74,31 +84,58 @@ class PrepTrackRepository(private val database: AppDatabase) {
             cal.timeInMillis
         }
 
+        val fullExamName = if (!stream.isNullOrBlank() && !examName.contains(stream, ignoreCase = true)) {
+            "$examName • $stream"
+        } else {
+            examName
+        }
+
         val newGoal = ExamGoalEntity(
             category = category,
-            examName = examName,
+            examName = fullExamName,
             targetYear = year,
             targetDateTimestamp = finalTargetTimestamp,
             isActive = true
         )
         val goalId = examGoalDao.insertGoal(newGoal)
 
-        // Find matching template by examName FIRST, then fallback to category
-        val template = DefaultSyllabusCatalog.allTemplates.find {
-            it.examName.equals(examName, ignoreCase = true)
-        } ?: DefaultSyllabusCatalog.allTemplates.find {
-            it.category.equals(category, ignoreCase = true)
-        } ?: DefaultSyllabusCatalog.allTemplates.first()
+        // Resolve subject templates
+        val subjectsToLoad = mutableListOf<DefaultSubjectTemplate>()
+
+        if (!selectedSubjectNames.isNullOrEmpty()) {
+            selectedSubjectNames.forEach { sName ->
+                // First check in customSubjects
+                val customMatch = customSubjects.find { it.name.equals(sName, ignoreCase = true) }
+                if (customMatch != null) {
+                    subjectsToLoad.add(customMatch)
+                } else {
+                    // Try StreamSyllabusCatalog
+                    val catSubject = StreamSyllabusCatalog.getSubjectTemplate(sName, examName)
+                    subjectsToLoad.add(catSubject)
+                }
+            }
+        } else {
+            // Fallback to pre-built DefaultExamTemplate
+            val template = DefaultSyllabusCatalog.allTemplates.find {
+                it.examName.equals(examName, ignoreCase = true)
+            } ?: DefaultSyllabusCatalog.allTemplates.find {
+                it.category.equals(category, ignoreCase = true)
+            } ?: DefaultSyllabusCatalog.allTemplates.first()
+
+            subjectsToLoad.addAll(template.subjects)
+            subjectsToLoad.addAll(customSubjects)
+        }
 
         // Copy template subjects into user's DB
-        template.subjects.forEachIndexed { sIndex, sTemplate ->
+        subjectsToLoad.forEachIndexed { sIndex, sTemplate ->
+            val isCustomSub = customSubjects.any { it.name.equals(sTemplate.name, ignoreCase = true) }
             val subjectEntity = SubjectEntity(
                 examId = goalId,
                 name = sTemplate.name,
                 colorHex = sTemplate.colorHex,
                 iconName = sTemplate.iconName,
                 sortOrder = sIndex,
-                isCustom = false
+                isCustom = isCustomSub
             )
             val subjectId = subjectDao.insertSubject(subjectEntity)
 
@@ -109,7 +146,7 @@ class PrepTrackRepository(private val database: AppDatabase) {
                     totalLectures = cTemplate.lectureCount,
                     sortOrder = cIndex,
                     isImportant = cTemplate.isImportant,
-                    isCustom = false
+                    isCustom = isCustomSub
                 )
                 val chapterId = chapterDao.insertChapter(chapterEntity)
 
@@ -337,7 +374,181 @@ class PrepTrackRepository(private val database: AppDatabase) {
         }
     }
 
-    // Focus Sessions
+    // ==========================================
+    // FOCUS MODE ARCHITECTURE (Settings, Allowed Apps, Sessions)
+    // ==========================================
+
+    // 1. Focus Settings
+    fun getFocusSettings(): Flow<FocusSettingsEntity?> = focusSettingsDao.getSettings()
+    suspend fun getFocusSettingsSync(): FocusSettingsEntity? = focusSettingsDao.getSettingsSync()
+
+    suspend fun ensureFocusSettingsInitialized(): FocusSettingsEntity {
+        val existing = focusSettingsDao.getSettingsSync()
+        if (existing != null) return existing
+        val defaultSettings = FocusSettingsEntity(id = 1)
+        focusSettingsDao.insertOrUpdate(defaultSettings)
+        return defaultSettings
+    }
+
+    suspend fun saveFocusSettings(settings: FocusSettingsEntity) {
+        focusSettingsDao.insertOrUpdate(
+            settings.copy(
+                id = 1,
+                lastUpdatedTimestamp = System.currentTimeMillis()
+            )
+        )
+    }
+
+    suspend fun updateFocusTimerState(
+        isActive: Boolean,
+        isPaused: Boolean,
+        remainingSeconds: Int,
+        targetEndTime: Long?
+    ) {
+        val current = focusSettingsDao.getSettingsSync() ?: FocusSettingsEntity(id = 1)
+        focusSettingsDao.insertOrUpdate(
+            current.copy(
+                isFocusModeActive = isActive,
+                isPaused = isPaused,
+                remainingSeconds = remainingSeconds,
+                targetEndTimeTimestamp = targetEndTime,
+                lastUpdatedTimestamp = System.currentTimeMillis()
+            )
+        )
+    }
+
+    // 2. Focus Allowed Apps
+    fun getAllAllowedApps(): Flow<List<FocusAllowedAppEntity>> = focusAllowedAppDao.getAllAllowedApps()
+    suspend fun getAllAllowedAppsSync(): List<FocusAllowedAppEntity> = focusAllowedAppDao.getAllAllowedAppsSync()
+
+    fun getEnabledAllowedApps(): Flow<List<FocusAllowedAppEntity>> = focusAllowedAppDao.getEnabledAllowedApps()
+    suspend fun getEnabledAllowedAppsSync(): List<FocusAllowedAppEntity> = focusAllowedAppDao.getEnabledAllowedAppsSync()
+
+    suspend fun setAppAllowed(
+        packageName: String,
+        appName: String,
+        isAllowed: Boolean,
+        category: String = "EDUCATION"
+    ) {
+        focusAllowedAppDao.insertOrUpdate(
+            FocusAllowedAppEntity(
+                packageName = packageName,
+                appName = appName,
+                isEnabled = isAllowed,
+                category = category,
+                updatedAt = System.currentTimeMillis()
+            )
+        )
+    }
+
+    suspend fun toggleAppAllowed(packageName: String, isAllowed: Boolean) {
+        focusAllowedAppDao.setAppEnabled(packageName, isAllowed)
+    }
+
+    suspend fun removeAllowedApp(packageName: String) {
+        focusAllowedAppDao.delete(packageName)
+    }
+
+    suspend fun seedDefaultAllowedAppsIfEmpty() {
+        // In Phase 4, apps are dynamically discovered from the user's actual device.
+        // No hardcoded universal apps are automatically injected.
+    }
+
+    // 3. Focus Sessions
+    fun getActiveFocusSession(): Flow<FocusSessionEntity?> = focusSessionDao.getActiveSession()
+    suspend fun getActiveFocusSessionSync(): FocusSessionEntity? = focusSessionDao.getActiveSessionSync()
+
+    suspend fun startFocusSession(
+        goalId: Long?,
+        taskId: Long? = null,
+        subjectId: Long? = null,
+        subjectName: String,
+        chapterName: String = "",
+        topicName: String = "",
+        durationMinutes: Int,
+        sessionType: String = "FOCUS"
+    ): Long {
+        val now = System.currentTimeMillis()
+        val session = FocusSessionEntity(
+            goalId = goalId,
+            taskId = taskId,
+            subjectId = subjectId,
+            subjectName = subjectName,
+            chapterName = chapterName,
+            topicName = topicName,
+            durationMinutes = durationMinutes,
+            sessionType = sessionType,
+            startTime = now,
+            endTime = now + durationMinutes * 60 * 1000L,
+            status = "IN_PROGRESS",
+            completedAtTimestamp = 0L,
+            createdAt = now
+        )
+        return focusSessionDao.insertSession(session)
+    }
+
+    suspend fun pauseFocusSession(sessionId: Long, activeDurationSeconds: Long, pausedDurationSeconds: Long) {
+        val session = focusSessionDao.getSessionById(sessionId) ?: return
+        focusSessionDao.updateSession(
+            session.copy(
+                status = "PAUSED",
+                activeDuration = activeDurationSeconds,
+                pausedDuration = pausedDurationSeconds
+            )
+        )
+    }
+
+    suspend fun resumeFocusSession(sessionId: Long) {
+        val session = focusSessionDao.getSessionById(sessionId) ?: return
+        focusSessionDao.updateSession(session.copy(status = "IN_PROGRESS"))
+    }
+
+    suspend fun completeFocusSession(
+        sessionId: Long,
+        activeDurationSeconds: Long,
+        pausedDurationSeconds: Long
+    ) {
+        val now = System.currentTimeMillis()
+        val session = focusSessionDao.getSessionById(sessionId)
+        if (session != null) {
+            val minutes = (activeDurationSeconds / 60).coerceAtLeast(1).toInt()
+            focusSessionDao.updateSession(
+                session.copy(
+                    status = "COMPLETED",
+                    endTime = now,
+                    activeDuration = activeDurationSeconds,
+                    pausedDuration = pausedDurationSeconds,
+                    completedAtTimestamp = now,
+                    durationMinutes = minutes
+                )
+            )
+            if (session.sessionType == "FOCUS") {
+                recordStudyActivity(minutes.toLong())
+            }
+        }
+    }
+
+    suspend fun abandonFocusSession(
+        sessionId: Long,
+        activeDurationSeconds: Long,
+        pausedDurationSeconds: Long
+    ) {
+        val now = System.currentTimeMillis()
+        val session = focusSessionDao.getSessionById(sessionId)
+        if (session != null) {
+            focusSessionDao.updateSession(
+                session.copy(
+                    status = "ABANDONED",
+                    endTime = now,
+                    activeDuration = activeDurationSeconds,
+                    pausedDuration = pausedDurationSeconds,
+                    completedAtTimestamp = now
+                )
+            )
+        }
+    }
+
+    // Existing Focus Sessions compatibility
     suspend fun logFocusSession(
         subjectName: String,
         chapterName: String,
@@ -436,5 +647,10 @@ class PrepTrackRepository(private val database: AppDatabase) {
         }
         lectureDao.insertLectures(resetLecs)
         return true
+    }
+
+    suspend fun switchActiveGoal(goalId: Long) {
+        examGoalDao.deactivateAllGoals()
+        examGoalDao.activateGoal(goalId)
     }
 }

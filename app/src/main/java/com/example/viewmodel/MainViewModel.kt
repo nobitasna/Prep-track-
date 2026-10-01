@@ -1,26 +1,35 @@
 package com.example.viewmodel
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.data.defaultdata.DefaultSubjectTemplate
 import com.example.data.defaultdata.DefaultSyllabusCatalog
 import com.example.data.local.AppDatabase
 import com.example.data.local.entity.ChapterEntity
 import com.example.data.local.entity.ExamGoalEntity
+import com.example.data.local.entity.FocusAllowedAppEntity
 import com.example.data.local.entity.FocusSessionEntity
+import com.example.data.local.entity.FocusSettingsEntity
 import com.example.data.local.entity.LectureEntity
 import com.example.data.local.entity.StudyPlanEntity
 import com.example.data.local.entity.SubjectEntity
 import com.example.data.local.entity.UserStreakEntity
 import com.example.data.local.entity.WeeklyTimetableEntryEntity
 import com.example.data.model.ActivationResult
+import com.example.data.model.DeviceAppInfo
 import com.example.data.model.StudyPlanCalculation
 import com.example.data.model.SubscriptionInfo
 import com.example.data.model.SubscriptionTier
 import com.example.data.repository.PrepTrackRepository
 import com.example.data.repository.SubscriptionRepository
+import com.example.enforcement.FocusEnforcementManager
+import com.example.permission.FocusPermissionManager
+import com.example.util.InstalledAppsManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,9 +38,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import java.util.Calendar
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -48,6 +59,8 @@ sealed class AppScreen {
     object Syllabus : AppScreen()
     data class ChapterDetail(val chapterId: Long) : AppScreen()
     object Focus : AppScreen()
+    object FocusPermission : AppScreen()
+    object ChooseAllowedApps : AppScreen()
     object Analytics : AppScreen()
     object Settings : AppScreen()
 }
@@ -99,21 +112,59 @@ data class TodayProgressSummary(
 
 data class PomodoroUiState(
     val isRunning: Boolean = false,
+    val isPaused: Boolean = false,
     val isBreak: Boolean = false,
     val totalSeconds: Int = 25 * 60,
     val remainingSeconds: Int = 25 * 60,
     val selectedSubject: String = "Physics",
     val selectedChapter: String = "",
     val selectedTopic: String = "",
+    val currentTaskName: String = "",
     val completedFocusMinutesToday: Int = 0,
-    val selectedDistractionShield: Boolean = false
-)
+    val selectedDistractionShield: Boolean = true,
+    val strictModeEnabled: Boolean = false,
+    val ambientSoundType: String = "NONE",
+    val activeSessionId: Long? = null,
+    val allowedAppsCount: Int = 0,
+    val sessionStartTime: Long = 0L,
+    val currentSegmentStartTime: Long = 0L,
+    val accumulatedActiveDurationMs: Long = 0L,
+    val accumulatedPausedDurationMs: Long = 0L,
+    val lastPauseTimestamp: Long = 0L,
+    val elapsedSecondsTicker: Long = 0L
+) {
+    fun getActiveDurationSeconds(): Long {
+        val activeMs = if (isRunning && !isPaused && currentSegmentStartTime > 0L) {
+            accumulatedActiveDurationMs + (System.currentTimeMillis() - currentSegmentStartTime).coerceAtLeast(0L)
+        } else {
+            accumulatedActiveDurationMs
+        }
+        return (activeMs / 1000L).coerceAtLeast(0L)
+    }
 
-class MainViewModel(application: Application) : AndroidViewModel(application) {
+    fun getPausedDurationSeconds(): Long {
+        val pausedMs = if (isPaused && lastPauseTimestamp > 0L) {
+            accumulatedPausedDurationMs + (System.currentTimeMillis() - lastPauseTimestamp).coerceAtLeast(0L)
+        } else {
+            accumulatedPausedDurationMs
+        }
+        return (pausedMs / 1000L).coerceAtLeast(0L)
+    }
+
+    fun getFormattedElapsedTime(): String {
+        val totalSecs = getActiveDurationSeconds()
+        val hours = totalSecs / 3600
+        val minutes = (totalSecs % 3600) / 60
+        val seconds = totalSecs % 60
+        return String.format("%02d:%02d:%02d", hours, minutes, seconds)
+    }
+}
+
+class MainViewModel(private val app: Application) : AndroidViewModel(app) {
 
     private val repository: PrepTrackRepository
-    private val authPrefs = application.getSharedPreferences("prep_track_auth", android.content.Context.MODE_PRIVATE)
-    private val subscriptionRepository = SubscriptionRepository(application)
+    private val authPrefs = app.getSharedPreferences("prep_track_auth", android.content.Context.MODE_PRIVATE)
+    private val subscriptionRepository = SubscriptionRepository(app)
     private val firebaseAuth = FirebaseAuth.getInstance()
     private val firebaseCurrentUser = firebaseAuth.currentUser
 
@@ -370,7 +421,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     init {
-        val database = AppDatabase.getInstance(application)
+        val database = AppDatabase.getInstance(app)
         repository = PrepTrackRepository(database)
 
         if (!isInitiallyLoggedIn) {
@@ -679,12 +730,149 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         TodayProgressSummary(0, 0, 0, 0, 0f, 0f, "0h 0m", "0h 0m", 0f, "0h 0m", false)
     )
 
+    // Focus Mode & Allowed Apps State
+    val focusSettings: StateFlow<FocusSettingsEntity> = repository.getFocusSettings()
+        .map { it ?: FocusSettingsEntity(id = 1) }
+        .stateIn(
+            viewModelScope,
+            SharingStarted.Eagerly,
+            FocusSettingsEntity(id = 1)
+        )
+
+    val allowedApps: StateFlow<List<FocusAllowedAppEntity>> = repository.getAllAllowedApps()
+        .stateIn(
+            viewModelScope,
+            SharingStarted.Eagerly,
+            emptyList()
+        )
+
+    val enabledAllowedApps: StateFlow<List<FocusAllowedAppEntity>> = repository.getEnabledAllowedApps()
+        .stateIn(
+            viewModelScope,
+            SharingStarted.Eagerly,
+            emptyList()
+        )
+
+    val activeFocusSession: StateFlow<FocusSessionEntity?> = repository.getActiveFocusSession()
+        .stateIn(
+            viewModelScope,
+            SharingStarted.Eagerly,
+            null
+        )
+
+    // Focus Permission State (Phase 3)
+    private val _focusPermissionState = MutableStateFlow(
+        FocusPermissionManager.checkPermissionState(
+            app,
+            wasPreviouslyGranted = authPrefs.getBoolean("focus_permission_ever_granted", false),
+            hasAttemptedGrant = authPrefs.getBoolean("focus_permission_attempted", false)
+        )
+    )
+    val focusPermissionState: StateFlow<FocusPermissionManager.FocusPermissionState> = _focusPermissionState.asStateFlow()
+
+    // Dynamically Discovered Device Apps (Phase 4)
+    private val _installedDeviceApps = MutableStateFlow<List<DeviceAppInfo>>(emptyList())
+    val installedDeviceApps: StateFlow<List<DeviceAppInfo>> = _installedDeviceApps.asStateFlow()
+
+    private val _isInstalledAppsLoading = MutableStateFlow(false)
+    val isInstalledAppsLoading: StateFlow<Boolean> = _isInstalledAppsLoading.asStateFlow()
+
+    // Real Enforcement State (Phase 5)
+    val enforcementState: StateFlow<FocusEnforcementManager.EnforcementState> = FocusEnforcementManager.enforcementState
+    val lastBlockedPackage: StateFlow<String?> = FocusEnforcementManager.lastBlockedPackage
+    val enforcementTier: StateFlow<FocusEnforcementManager.EnforcementTier> = FocusEnforcementManager.enforcementTier
+
     // Pomodoro Timer State
     private val _pomodoroState = MutableStateFlow(PomodoroUiState())
     val pomodoroState: StateFlow<PomodoroUiState> = _pomodoroState.asStateFlow()
     private var timerJob: Job? = null
 
     init {
+        // Initial check for Focus Mode permissions
+        refreshFocusPermissions(app)
+
+        // Observe enforcement state to automatically react if permission is revoked in background
+        viewModelScope.launch {
+            FocusEnforcementManager.enforcementState.collect { enfState ->
+                if (enfState == FocusEnforcementManager.EnforcementState.PERMISSION_REVOKED) {
+                    if (_pomodoroState.value.isRunning) {
+                        pausePomodoro()
+                    }
+                    refreshFocusPermissions(app)
+                }
+            }
+        }
+
+        // Initialize Focus Settings & Allowed Apps, restore state across recreation / restart
+        viewModelScope.launch {
+            repository.ensureFocusSettingsInitialized()
+            repository.seedDefaultAllowedAppsIfEmpty()
+
+            // Observe enabled allowed apps count to keep pomodoroState updated
+            launch {
+                repository.getEnabledAllowedApps().collect { apps ->
+                    _pomodoroState.value = _pomodoroState.value.copy(allowedAppsCount = apps.size)
+                }
+            }
+
+            val initialSettings = repository.getFocusSettingsSync()
+            if (initialSettings != null && initialSettings.isFocusModeActive) {
+                val now = System.currentTimeMillis()
+                val activeSession = repository.getActiveFocusSessionSync()
+                val accumulatedActive = (activeSession?.activeDuration ?: 0L) * 1000L
+                val accumulatedPaused = (activeSession?.pausedDuration ?: 0L) * 1000L
+                val sessionStart = activeSession?.startTime ?: (now - accumulatedActive)
+
+                if (initialSettings.isPaused) {
+                    _pomodoroState.value = _pomodoroState.value.copy(
+                        isRunning = false,
+                        isPaused = true,
+                        isBreak = initialSettings.isBreak,
+                        totalSeconds = initialSettings.totalSeconds,
+                        remainingSeconds = initialSettings.remainingSeconds,
+                        selectedSubject = initialSettings.selectedSubjectName,
+                        selectedChapter = initialSettings.selectedChapterName,
+                        selectedTopic = initialSettings.selectedTopicName,
+                        currentTaskName = initialSettings.selectedTopicName,
+                        selectedDistractionShield = initialSettings.distractionShieldEnabled,
+                        strictModeEnabled = initialSettings.strictModeEnabled,
+                        ambientSoundType = initialSettings.ambientSoundType,
+                        activeSessionId = initialSettings.activeSessionId,
+                        sessionStartTime = sessionStart,
+                        accumulatedActiveDurationMs = accumulatedActive,
+                        accumulatedPausedDurationMs = accumulatedPaused,
+                        lastPauseTimestamp = initialSettings.pausedAtTimestamp ?: now
+                    )
+                } else {
+                    _pomodoroState.value = _pomodoroState.value.copy(
+                        isRunning = true,
+                        isPaused = false,
+                        isBreak = initialSettings.isBreak,
+                        totalSeconds = initialSettings.totalSeconds,
+                        remainingSeconds = initialSettings.remainingSeconds,
+                        selectedSubject = initialSettings.selectedSubjectName,
+                        selectedChapter = initialSettings.selectedChapterName,
+                        selectedTopic = initialSettings.selectedTopicName,
+                        currentTaskName = initialSettings.selectedTopicName,
+                        selectedDistractionShield = initialSettings.distractionShieldEnabled,
+                        strictModeEnabled = initialSettings.strictModeEnabled,
+                        ambientSoundType = initialSettings.ambientSoundType,
+                        activeSessionId = initialSettings.activeSessionId,
+                        sessionStartTime = sessionStart,
+                        currentSegmentStartTime = now,
+                        accumulatedActiveDurationMs = accumulatedActive,
+                        accumulatedPausedDurationMs = accumulatedPaused,
+                        lastPauseTimestamp = 0L
+                    )
+                    if (!initialSettings.isBreak && FocusPermissionManager.hasUsageAccessPermission(app)) {
+                        val allowedApps = repository.getEnabledAllowedAppsSync().map { it.packageName }.toSet()
+                        FocusEnforcementManager.startEnforcement(app, initialSettings.activeSessionId ?: 1L, allowedApps)
+                    }
+                    startFocusActiveTimerLoop()
+                }
+            }
+        }
+
         // Observe active goal to load its specific subjects, chapters, lectures, and plan
         viewModelScope.launch {
             activeGoal.collectLatest { goal ->
@@ -723,11 +911,40 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         examName: String,
         year: String,
         days: Int = 90,
-        customTargetTimestamp: Long? = null
+        customTargetTimestamp: Long? = null,
+        board: String? = null,
+        stream: String? = null,
+        selectedSubjectNames: List<String>? = null,
+        customSubjects: List<DefaultSubjectTemplate> = emptyList()
     ) {
         viewModelScope.launch {
-            repository.initializeExamGoalWithDefaultSyllabus(category, examName, year, days, customTargetTimestamp)
+            repository.initializeExamGoalWithDefaultSyllabus(
+                category = category,
+                examName = examName,
+                year = year,
+                targetDays = days,
+                customTargetTimestamp = customTargetTimestamp,
+                board = board,
+                stream = stream,
+                selectedSubjectNames = selectedSubjectNames,
+                customSubjects = customSubjects
+            )
             _currentScreen.value = AppScreen.Dashboard
+        }
+    }
+
+    fun switchActiveGoal(goalId: Long) {
+        viewModelScope.launch {
+            repository.switchActiveGoal(goalId)
+            // Reload syllabus and progress for newly active goal
+            val currentPlan = repository.getPlanForExamSync(goalId)
+            if (currentPlan == null) {
+                // Initialize default plan if missing
+                val subjects = repository.getSubjectsForExamSync(goalId)
+                if (subjects.isNotEmpty()) {
+                    repository.saveStudyPlan(StudyPlanEntity(examId = goalId, targetDays = 90))
+                }
+            }
         }
     }
 
@@ -967,53 +1184,324 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // Pomodoro Timer Controls
+    // Focus Mode & Pomodoro Timer Controls
     fun setPomodoroPreset(focusMinutes: Int, breakMinutes: Int) {
         timerJob?.cancel()
         _pomodoroState.value = _pomodoroState.value.copy(
             isRunning = false,
+            isPaused = false,
             isBreak = false,
             totalSeconds = focusMinutes * 60,
-            remainingSeconds = focusMinutes * 60
+            remainingSeconds = focusMinutes * 60,
+            activeSessionId = null
         )
+        viewModelScope.launch {
+            repository.saveFocusSettings(
+                FocusSettingsEntity(
+                    id = 1,
+                    isFocusModeActive = false,
+                    isPaused = false,
+                    activeSessionId = null,
+                    targetEndTimeTimestamp = null,
+                    totalSeconds = focusMinutes * 60,
+                    remainingSeconds = focusMinutes * 60,
+                    isBreak = false,
+                    selectedSubjectName = _pomodoroState.value.selectedSubject,
+                    selectedChapterName = _pomodoroState.value.selectedChapter,
+                    selectedTopicName = _pomodoroState.value.selectedTopic,
+                    distractionShieldEnabled = _pomodoroState.value.selectedDistractionShield,
+                    strictModeEnabled = _pomodoroState.value.strictModeEnabled,
+                    ambientSoundType = _pomodoroState.value.ambientSoundType
+                )
+            )
+        }
     }
 
-    fun startPomodoro() {
-        if (_pomodoroState.value.isRunning) return
-        _pomodoroState.value = _pomodoroState.value.copy(isRunning = true)
-        timerJob = viewModelScope.launch {
-            while (_pomodoroState.value.remainingSeconds > 0 && _pomodoroState.value.isRunning) {
-                delay(1000)
-                val remaining = _pomodoroState.value.remainingSeconds - 1
-                _pomodoroState.value = _pomodoroState.value.copy(remainingSeconds = remaining)
+    fun startFocusSession(taskName: String = "") {
+        if (_pomodoroState.value.isRunning && !_pomodoroState.value.isPaused) return
+
+        // 1. Verify required Focus Mode permission
+        if (!FocusPermissionManager.hasUsageAccessPermission(app)) {
+            refreshFocusPermissions(app)
+            navigateTo(AppScreen.FocusPermission)
+            return
+        }
+
+        val state = _pomodoroState.value
+
+        // If resuming a paused session
+        if (state.isPaused && state.activeSessionId != null) {
+            resumeFocusSession()
+            return
+        }
+
+        val now = System.currentTimeMillis()
+        val targetTask = if (taskName.isNotBlank()) {
+            taskName
+        } else if (state.selectedTopic.isNotBlank()) {
+            state.selectedTopic
+        } else if (state.selectedChapter.isNotBlank()) {
+            "${state.selectedSubject} - ${state.selectedChapter}"
+        } else {
+            "${state.selectedSubject} Core Preparation"
+        }
+
+        viewModelScope.launch {
+            val goalId = activeGoal.value?.id
+            val subjectId = _subjects.value.find { it.name == state.selectedSubject }?.id
+
+            val sessionId = repository.startFocusSession(
+                goalId = goalId,
+                subjectId = subjectId,
+                subjectName = state.selectedSubject,
+                chapterName = state.selectedChapter,
+                topicName = targetTask,
+                durationMinutes = (state.totalSeconds / 60).coerceAtLeast(1),
+                sessionType = if (state.isBreak) "BREAK" else "FOCUS"
+            )
+
+            val allowedApps = repository.getEnabledAllowedAppsSync().map { it.packageName }.toSet()
+
+            if (!state.isBreak) {
+                FocusEnforcementManager.startEnforcement(app, sessionId, allowedApps)
             }
-            if (_pomodoroState.value.remainingSeconds <= 0) {
-                completePomodoroSession()
+
+            _pomodoroState.value = state.copy(
+                isRunning = true,
+                isPaused = false,
+                activeSessionId = sessionId,
+                currentTaskName = targetTask,
+                sessionStartTime = now,
+                currentSegmentStartTime = now,
+                accumulatedActiveDurationMs = 0L,
+                accumulatedPausedDurationMs = 0L,
+                lastPauseTimestamp = 0L,
+                allowedAppsCount = allowedApps.size
+            )
+
+            repository.saveFocusSettings(
+                FocusSettingsEntity(
+                    id = 1,
+                    isFocusModeActive = true,
+                    isPaused = false,
+                    activeSessionId = sessionId,
+                    targetEndTimeTimestamp = now + (state.remainingSeconds * 1000L),
+                    totalSeconds = state.totalSeconds,
+                    remainingSeconds = state.remainingSeconds,
+                    isBreak = state.isBreak,
+                    selectedGoalId = goalId,
+                    selectedSubjectName = state.selectedSubject,
+                    selectedChapterName = state.selectedChapter,
+                    selectedTopicName = targetTask,
+                    distractionShieldEnabled = state.selectedDistractionShield,
+                    strictModeEnabled = state.strictModeEnabled,
+                    ambientSoundType = state.ambientSoundType
+                )
+            )
+
+            startFocusActiveTimerLoop()
+        }
+    }
+
+    private fun startFocusActiveTimerLoop() {
+        timerJob?.cancel()
+        timerJob = viewModelScope.launch {
+            var tick = 0
+            while (_pomodoroState.value.isRunning && !_pomodoroState.value.isPaused) {
+                delay(1000)
+                tick++
+                val state = _pomodoroState.value
+                val activeSecs = state.getActiveDurationSeconds()
+
+                // Trigger UI recomposition with actual system timestamp
+                _pomodoroState.value = state.copy(
+                    elapsedSecondsTicker = System.currentTimeMillis()
+                )
+
+                // Periodically persist progress to Room DB (every 10 seconds)
+                if (tick % 10 == 0) {
+                    val sessionId = state.activeSessionId
+                    if (sessionId != null) {
+                        repository.pauseFocusSession(
+                            sessionId = sessionId,
+                            activeDurationSeconds = activeSecs,
+                            pausedDurationSeconds = state.getPausedDurationSeconds()
+                        )
+                    }
+                }
             }
         }
     }
 
-    fun pausePomodoro() {
+    fun pauseFocusSession() {
         timerJob?.cancel()
-        _pomodoroState.value = _pomodoroState.value.copy(isRunning = false)
+        val state = _pomodoroState.value
+        if (!state.isRunning || state.isPaused) return
+
+        val now = System.currentTimeMillis()
+        val currentSegmentDuration = (now - state.currentSegmentStartTime).coerceAtLeast(0L)
+        val newAccumulatedActive = state.accumulatedActiveDurationMs + currentSegmentDuration
+
+        FocusEnforcementManager.pauseEnforcement(app)
+
+        _pomodoroState.value = state.copy(
+            isRunning = false,
+            isPaused = true,
+            accumulatedActiveDurationMs = newAccumulatedActive,
+            lastPauseTimestamp = now
+        )
+
+        viewModelScope.launch {
+            val sessionId = state.activeSessionId
+            if (sessionId != null) {
+                repository.pauseFocusSession(
+                    sessionId = sessionId,
+                    activeDurationSeconds = newAccumulatedActive / 1000L,
+                    pausedDurationSeconds = state.accumulatedPausedDurationMs / 1000L
+                )
+            }
+            repository.updateFocusTimerState(
+                isActive = true,
+                isPaused = true,
+                remainingSeconds = state.remainingSeconds,
+                targetEndTime = null
+            )
+        }
+    }
+
+    fun resumeFocusSession() {
+        val state = _pomodoroState.value
+        if (state.isRunning || !state.isPaused) return
+
+        // Validate permission still active
+        if (!FocusPermissionManager.hasUsageAccessPermission(app)) {
+            refreshFocusPermissions(app)
+            navigateTo(AppScreen.FocusPermission)
+            return
+        }
+
+        val now = System.currentTimeMillis()
+        val pauseDuration = if (state.lastPauseTimestamp > 0L) (now - state.lastPauseTimestamp).coerceAtLeast(0L) else 0L
+        val newAccumulatedPaused = state.accumulatedPausedDurationMs + pauseDuration
+
+        FocusEnforcementManager.resumeEnforcement(app)
+
+        _pomodoroState.value = state.copy(
+            isRunning = true,
+            isPaused = false,
+            currentSegmentStartTime = now,
+            accumulatedPausedDurationMs = newAccumulatedPaused,
+            lastPauseTimestamp = 0L
+        )
+
+        viewModelScope.launch {
+            val sessionId = state.activeSessionId
+            if (sessionId != null) {
+                repository.resumeFocusSession(sessionId)
+            }
+            startFocusActiveTimerLoop()
+        }
+    }
+
+    fun endFocusSession(isAbandoned: Boolean = false) {
+        timerJob?.cancel()
+        val state = _pomodoroState.value
+        val sessionId = state.activeSessionId
+        val activeSecs = state.getActiveDurationSeconds()
+        val pausedSecs = state.getPausedDurationSeconds()
+
+        FocusEnforcementManager.stopEnforcement(app)
+
+        val activeMins = (activeSecs / 60).toInt()
+
+        _pomodoroState.value = state.copy(
+            isRunning = false,
+            isPaused = false,
+            activeSessionId = null,
+            sessionStartTime = 0L,
+            currentSegmentStartTime = 0L,
+            accumulatedActiveDurationMs = 0L,
+            accumulatedPausedDurationMs = 0L,
+            lastPauseTimestamp = 0L,
+            completedFocusMinutesToday = state.completedFocusMinutesToday + activeMins
+        )
+
+        viewModelScope.launch {
+            if (sessionId != null) {
+                if (isAbandoned && activeSecs < 60) {
+                    repository.abandonFocusSession(sessionId, activeSecs, pausedSecs)
+                } else {
+                    repository.completeFocusSession(sessionId, activeSecs, pausedSecs)
+                }
+            }
+
+            repository.saveFocusSettings(
+                FocusSettingsEntity(
+                    id = 1,
+                    isFocusModeActive = false,
+                    isPaused = false,
+                    activeSessionId = null,
+                    targetEndTimeTimestamp = null,
+                    totalSeconds = state.totalSeconds,
+                    remainingSeconds = state.totalSeconds,
+                    isBreak = state.isBreak,
+                    selectedSubjectName = state.selectedSubject,
+                    selectedChapterName = state.selectedChapter,
+                    selectedTopicName = state.selectedTopic,
+                    distractionShieldEnabled = state.selectedDistractionShield,
+                    strictModeEnabled = state.strictModeEnabled,
+                    ambientSoundType = state.ambientSoundType
+                )
+            )
+        }
+    }
+
+    fun startPomodoro() {
+        startFocusSession()
+    }
+
+    fun pausePomodoro() {
+        pauseFocusSession()
+    }
+
+    fun resumePomodoro() {
+        resumeFocusSession()
     }
 
     fun resetPomodoro() {
-        timerJob?.cancel()
-        _pomodoroState.value = _pomodoroState.value.copy(
-            isRunning = false,
-            remainingSeconds = _pomodoroState.value.totalSeconds
-        )
+        endFocusSession(isAbandoned = true)
     }
 
     fun skipBreak() {
         timerJob?.cancel()
         _pomodoroState.value = _pomodoroState.value.copy(
             isRunning = false,
+            isPaused = false,
             isBreak = false,
             totalSeconds = 25 * 60,
-            remainingSeconds = 25 * 60
+            remainingSeconds = 25 * 60,
+            activeSessionId = null
         )
+        viewModelScope.launch {
+            repository.saveFocusSettings(
+                FocusSettingsEntity(
+                    id = 1,
+                    isFocusModeActive = false,
+                    isPaused = false,
+                    activeSessionId = null,
+                    targetEndTimeTimestamp = null,
+                    totalSeconds = 25 * 60,
+                    remainingSeconds = 25 * 60,
+                    isBreak = false,
+                    selectedSubjectName = _pomodoroState.value.selectedSubject,
+                    selectedChapterName = _pomodoroState.value.selectedChapter,
+                    selectedTopicName = _pomodoroState.value.selectedTopic,
+                    distractionShieldEnabled = _pomodoroState.value.selectedDistractionShield,
+                    strictModeEnabled = _pomodoroState.value.strictModeEnabled,
+                    ambientSoundType = _pomodoroState.value.ambientSoundType
+                )
+            )
+        }
     }
 
     fun setPomodoroTag(subject: String, chapter: String = "", topic: String = "") {
@@ -1022,21 +1510,57 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             selectedChapter = chapter,
             selectedTopic = topic
         )
+        viewModelScope.launch {
+            val current = repository.getFocusSettingsSync() ?: FocusSettingsEntity(id = 1)
+            repository.saveFocusSettings(
+                current.copy(
+                    selectedSubjectName = subject,
+                    selectedChapterName = chapter,
+                    selectedTopicName = topic
+                )
+            )
+        }
     }
 
     fun toggleDistractionShield() {
+        val updated = !_pomodoroState.value.selectedDistractionShield
         _pomodoroState.value = _pomodoroState.value.copy(
-            selectedDistractionShield = !_pomodoroState.value.selectedDistractionShield
+            selectedDistractionShield = updated
         )
+        viewModelScope.launch {
+            val current = repository.getFocusSettingsSync() ?: FocusSettingsEntity(id = 1)
+            repository.saveFocusSettings(current.copy(distractionShieldEnabled = updated))
+        }
     }
 
     private fun completePomodoroSession() {
         val state = _pomodoroState.value
-        val sessionMinutes = state.totalSeconds / 60
-        val sessionType = if (state.isBreak) "BREAK" else "FOCUS"
+        val sessionId = state.activeSessionId
+        val sessionMinutes = (state.totalSeconds / 60).coerceAtLeast(1)
+        val nextIsBreak = !state.isBreak
+        val nextMinutes = if (nextIsBreak) 5 else 25
+
+        // Stop real Android enforcement
+        FocusEnforcementManager.stopEnforcement(app)
+
+        _pomodoroState.value = state.copy(
+            isRunning = false,
+            isPaused = false,
+            isBreak = nextIsBreak,
+            totalSeconds = nextMinutes * 60,
+            remainingSeconds = nextMinutes * 60,
+            completedFocusMinutesToday = state.completedFocusMinutesToday + if (!state.isBreak) sessionMinutes else 0,
+            activeSessionId = null
+        )
 
         viewModelScope.launch {
-            if (!state.isBreak) {
+            if (sessionId != null) {
+                repository.completeFocusSession(
+                    sessionId = sessionId,
+                    activeDurationSeconds = state.totalSeconds.toLong(),
+                    pausedDurationSeconds = 0L
+                )
+            } else if (!state.isBreak) {
                 repository.logFocusSession(
                     subjectName = state.selectedSubject,
                     chapterName = state.selectedChapter,
@@ -1046,15 +1570,212 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 )
             }
 
-            // Switch to break or focus
-            val nextIsBreak = !state.isBreak
-            val nextMinutes = if (nextIsBreak) 5 else 25
-            _pomodoroState.value = state.copy(
-                isRunning = false,
-                isBreak = nextIsBreak,
-                totalSeconds = nextMinutes * 60,
-                remainingSeconds = nextMinutes * 60,
-                completedFocusMinutesToday = state.completedFocusMinutesToday + if (!state.isBreak) sessionMinutes else 0
+            repository.saveFocusSettings(
+                FocusSettingsEntity(
+                    id = 1,
+                    isFocusModeActive = false,
+                    isPaused = false,
+                    activeSessionId = null,
+                    targetEndTimeTimestamp = null,
+                    totalSeconds = nextMinutes * 60,
+                    remainingSeconds = nextMinutes * 60,
+                    isBreak = nextIsBreak,
+                    selectedSubjectName = state.selectedSubject,
+                    selectedChapterName = state.selectedChapter,
+                    selectedTopicName = state.selectedTopic,
+                    distractionShieldEnabled = state.selectedDistractionShield,
+                    strictModeEnabled = state.strictModeEnabled,
+                    ambientSoundType = state.ambientSoundType
+                )
+            )
+        }
+    }
+
+    private fun completeRestoredSession(settings: FocusSettingsEntity) {
+        val sessionId = settings.activeSessionId
+        val durationMinutes = (settings.totalSeconds / 60).coerceAtLeast(1)
+        val nextIsBreak = !settings.isBreak
+        val nextMinutes = if (nextIsBreak) 5 else 25
+
+        // Stop real Android enforcement
+        FocusEnforcementManager.stopEnforcement(app)
+
+        _pomodoroState.value = _pomodoroState.value.copy(
+            isRunning = false,
+            isPaused = false,
+            isBreak = nextIsBreak,
+            totalSeconds = nextMinutes * 60,
+            remainingSeconds = nextMinutes * 60,
+            completedFocusMinutesToday = _pomodoroState.value.completedFocusMinutesToday + if (!settings.isBreak) durationMinutes else 0,
+            activeSessionId = null
+        )
+
+        viewModelScope.launch {
+            if (sessionId != null) {
+                repository.completeFocusSession(
+                    sessionId = sessionId,
+                    activeDurationSeconds = settings.totalSeconds.toLong(),
+                    pausedDurationSeconds = 0L
+                )
+            } else if (!settings.isBreak) {
+                repository.logFocusSession(
+                    subjectName = settings.selectedSubjectName,
+                    chapterName = settings.selectedChapterName,
+                    topicName = settings.selectedTopicName,
+                    durationMinutes = durationMinutes,
+                    sessionType = "FOCUS"
+                )
+            }
+
+            repository.saveFocusSettings(
+                FocusSettingsEntity(
+                    id = 1,
+                    isFocusModeActive = false,
+                    isPaused = false,
+                    activeSessionId = null,
+                    targetEndTimeTimestamp = null,
+                    totalSeconds = nextMinutes * 60,
+                    remainingSeconds = nextMinutes * 60,
+                    isBreak = nextIsBreak,
+                    selectedSubjectName = settings.selectedSubjectName,
+                    selectedChapterName = settings.selectedChapterName,
+                    selectedTopicName = settings.selectedTopicName,
+                    distractionShieldEnabled = settings.distractionShieldEnabled,
+                    strictModeEnabled = settings.strictModeEnabled,
+                    ambientSoundType = settings.ambientSoundType
+                )
+            )
+        }
+    }
+
+    // Focus Allowed Apps Controls
+    fun toggleAllowedApp(packageName: String, isEnabled: Boolean) {
+        viewModelScope.launch {
+            repository.toggleAppAllowed(packageName, isEnabled)
+        }
+    }
+
+    fun addAllowedApp(packageName: String, appName: String, category: String = "EDUCATION") {
+        viewModelScope.launch {
+            repository.setAppAllowed(packageName, appName, isAllowed = true, category = category)
+        }
+    }
+
+    fun removeAllowedApp(packageName: String) {
+        viewModelScope.launch {
+            repository.removeAllowedApp(packageName)
+        }
+    }
+
+    fun setStrictMode(enabled: Boolean) {
+        _pomodoroState.value = _pomodoroState.value.copy(strictModeEnabled = enabled)
+        viewModelScope.launch {
+            val current = repository.getFocusSettingsSync() ?: FocusSettingsEntity(id = 1)
+            repository.saveFocusSettings(current.copy(strictModeEnabled = enabled))
+        }
+    }
+
+    fun setAmbientSound(soundType: String) {
+        _pomodoroState.value = _pomodoroState.value.copy(ambientSoundType = soundType)
+        viewModelScope.launch {
+            val current = repository.getFocusSettingsSync() ?: FocusSettingsEntity(id = 1)
+            repository.saveFocusSettings(current.copy(ambientSoundType = soundType))
+        }
+    }
+
+    // ==========================================
+    // Focus Mode Permission Management (Phase 3)
+    // ==========================================
+
+    fun refreshFocusPermissions(context: Context) {
+        val wasEverGranted = authPrefs.getBoolean("focus_permission_ever_granted", false)
+        val hasAttempted = authPrefs.getBoolean("focus_permission_attempted", false)
+        val newState = FocusPermissionManager.checkPermissionState(
+            context,
+            wasPreviouslyGranted = wasEverGranted,
+            hasAttemptedGrant = hasAttempted
+        )
+
+        if (newState.isGranted) {
+            authPrefs.edit().putBoolean("focus_permission_ever_granted", true).apply()
+        } else if (newState.isRevoked) {
+            // Permission was revoked later in Android Settings!
+            // Safely disable enforcement rather than pretending Focus Mode is active.
+            if (_pomodoroState.value.isRunning) {
+                pausePomodoro()
+            }
+            viewModelScope.launch {
+                val current = repository.getFocusSettingsSync() ?: FocusSettingsEntity(id = 1)
+                repository.saveFocusSettings(
+                    current.copy(
+                        isFocusModeActive = false,
+                        isPaused = false,
+                        targetEndTimeTimestamp = null
+                    )
+                )
+            }
+        }
+        _focusPermissionState.value = newState
+    }
+
+    fun onAllowPermissionClicked(context: Context) {
+        authPrefs.edit().putBoolean("focus_permission_attempted", true).apply()
+        FocusPermissionManager.openRequiredSettings(context)
+        // Refresh immediately after opening settings attempt
+        val wasEverGranted = authPrefs.getBoolean("focus_permission_ever_granted", false)
+        _focusPermissionState.value = FocusPermissionManager.checkPermissionState(
+            context,
+            wasPreviouslyGranted = wasEverGranted,
+            hasAttemptedGrant = true
+        )
+    }
+
+    // ==========================================
+    // Focus Mode: Real Allowed Apps Selection (Phase 4)
+    // ==========================================
+
+    fun loadDeviceApps(context: Context) {
+        viewModelScope.launch {
+            _isInstalledAppsLoading.value = true
+            val apps = withContext(Dispatchers.IO) {
+                InstalledAppsManager.getInstalledLaunchableApps(context)
+            }
+            _installedDeviceApps.value = apps
+            _isInstalledAppsLoading.value = false
+        }
+    }
+
+    fun toggleAllowedAppSelection(packageName: String, appName: String, isAllowed: Boolean) {
+        viewModelScope.launch {
+            repository.setAppAllowed(
+                packageName = packageName,
+                appName = appName,
+                isAllowed = isAllowed,
+                category = "DEVICE_APP"
+            )
+            // Synchronize Pomodoro UI state count
+            val currentAllowed = repository.getEnabledAllowedAppsSync()
+            _pomodoroState.value = _pomodoroState.value.copy(
+                allowedAppsCount = currentAllowed.size
+            )
+        }
+    }
+
+    fun clearAllAllowedApps() {
+        viewModelScope.launch {
+            val currentAllowed = repository.getEnabledAllowedAppsSync()
+            for (app in currentAllowed) {
+                repository.removeAllowedApp(app.packageName)
+            }
+            _pomodoroState.value = _pomodoroState.value.copy(allowedAppsCount = 0)
+        }
+    }
+
+    fun saveAllowedAppsConfiguration() {
+        viewModelScope.launch {
+            val currentAllowed = repository.getEnabledAllowedAppsSync()
+            _pomodoroState.value = _pomodoroState.value.copy(
+                allowedAppsCount = currentAllowed.size
             )
         }
     }

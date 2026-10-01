@@ -24,6 +24,8 @@ import com.example.ui.components.PrepTrackBottomBar
 import com.example.ui.components.PrepTrackTopBar
 import com.example.ui.screens.analytics.AnalyticsScreen
 import com.example.ui.screens.dashboard.DashboardScreen
+import com.example.ui.screens.focus.ChooseAllowedAppsScreen
+import com.example.ui.screens.focus.FocusPermissionScreen
 import com.example.ui.screens.focus.FocusScreen
 import com.example.ui.screens.onboarding.OnboardingSelectGoalScreen
 import com.example.ui.screens.onboarding.OnboardingWelcomeScreen
@@ -71,6 +73,8 @@ fun PrepTrackApp(viewModel: MainViewModel = viewModel()) {
             when (currentScreen) {
                 is AppScreen.ChapterDetail -> viewModel.navigateTo(AppScreen.Syllabus)
                 is AppScreen.Settings -> viewModel.navigateTo(AppScreen.Dashboard)
+                is AppScreen.FocusPermission -> viewModel.navigateTo(AppScreen.Focus)
+                is AppScreen.ChooseAllowedApps -> viewModel.navigateTo(AppScreen.Focus)
                 is AppScreen.SubscriptionSelection -> viewModel.navigateTo(AppScreen.Login)
                 is AppScreen.OnboardingSelectGoal -> viewModel.navigateTo(AppScreen.Dashboard)
                 is AppScreen.Onboarding -> viewModel.navigateTo(AppScreen.Splash)
@@ -89,7 +93,9 @@ fun PrepTrackApp(viewModel: MainViewModel = viewModel()) {
 
     val showTopBar = showBottomBar &&
             currentScreen !is AppScreen.ChapterDetail &&
-            currentScreen !is AppScreen.Settings
+            currentScreen !is AppScreen.Settings &&
+            currentScreen !is AppScreen.FocusPermission &&
+            currentScreen !is AppScreen.ChooseAllowedApps
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -143,8 +149,27 @@ fun PrepTrackApp(viewModel: MainViewModel = viewModel()) {
             is AppScreen.Onboarding -> {
                 OnboardingCarouselScreen(
                     initialPage = 1,
-                    onFinishOnboarding = { viewModel.navigateTo(AppScreen.Login) },
-                    onNavigateToLogin = { viewModel.navigateTo(AppScreen.Login) }
+                    onFinishOnboarding = { viewModel.navigateTo(AppScreen.OnboardingSelectGoal) },
+                    onNavigateToLogin = { viewModel.navigateTo(AppScreen.Login) },
+                    onGoogleSignIn = {
+                        scope.launch {
+                            when (val result = googleAuthManager.signIn()) {
+                                is GoogleAuthResult.Success -> {
+                                    viewModel.signInWithFirebaseGoogleToken(result.idToken)
+                                }
+                                is GoogleAuthResult.Cancelled -> {
+                                    viewModel.clearAuthError()
+                                }
+                                is GoogleAuthResult.NoAccountFound -> {
+                                    viewModel.setAuthError(result.message)
+                                }
+                                is GoogleAuthResult.Error -> {
+                                    viewModel.setAuthError(result.message)
+                                }
+                            }
+                        }
+                    },
+                    onGetStarted = { viewModel.navigateTo(AppScreen.OnboardingSelectGoal) }
                 )
             }
             is AppScreen.Login -> {
@@ -237,6 +262,21 @@ fun PrepTrackApp(viewModel: MainViewModel = viewModel()) {
             }
             is AppScreen.Focus -> {
                 FocusScreen(viewModel = viewModel, modifier = contentModifier)
+            }
+            is AppScreen.FocusPermission -> {
+                FocusPermissionScreen(
+                    viewModel = viewModel,
+                    modifier = contentModifier,
+                    onBack = { if (!viewModel.navigateBack()) viewModel.navigateTo(AppScreen.Focus) },
+                    onPermissionGranted = { viewModel.navigateTo(AppScreen.Focus) }
+                )
+            }
+            is AppScreen.ChooseAllowedApps -> {
+                ChooseAllowedAppsScreen(
+                    viewModel = viewModel,
+                    modifier = contentModifier,
+                    onBack = { if (!viewModel.navigateBack()) viewModel.navigateTo(AppScreen.Focus) }
+                )
             }
             is AppScreen.Analytics -> {
                 AnalyticsScreen(viewModel = viewModel, modifier = contentModifier)
