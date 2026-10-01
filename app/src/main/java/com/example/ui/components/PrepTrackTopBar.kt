@@ -1,6 +1,7 @@
 package com.example.ui.components
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -72,13 +73,10 @@ fun PrepTrackTopBar(
         },
         navigationIcon = {
             if (showBackButton) {
-                IconButton(
-                    onClick = onBackClick,
-                    modifier = Modifier.testTag("top_bar_back_button")
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back"
+                Box(modifier = Modifier.padding(start = 12.dp, end = 4.dp)) {
+                    GlobalBackButton(
+                        onClick = onBackClick,
+                        modifier = Modifier.testTag("top_bar_back_button")
                     )
                 }
             }

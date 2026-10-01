@@ -1,8 +1,17 @@
 package com.example.ui.screens.onboarding
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import com.example.ui.components.GlobalBackButton
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -62,6 +71,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -87,9 +97,14 @@ import kotlinx.coroutines.delay
 fun SplashScreen(
     onTimeout: () -> Unit
 ) {
+    var hasNavigated by remember { mutableStateOf(false) }
+
     LaunchedEffect(Unit) {
         delay(2200)
-        onTimeout()
+        if (!hasNavigated) {
+            hasNavigated = true
+            onTimeout()
+        }
     }
 
     Box(
@@ -104,7 +119,12 @@ fun SplashScreen(
                     )
                 )
             )
-            .clickable { onTimeout() }
+            .clickable {
+                if (!hasNavigated) {
+                    hasNavigated = true
+                    onTimeout()
+                }
+            }
     ) {
         // Starry Night Sky Canvas
         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -193,7 +213,7 @@ fun SplashScreen(
 }
 
 // ==========================================
-// 2. ONBOARDING CAROUSEL (Screens 1, 2, 3) WITH HOVERING BOARD
+// 2. ONBOARDING CAROUSEL (Screens 1, 2, 3, 4) - IMAGE 2 REDESIGN
 // ==========================================
 @Composable
 fun OnboardingCarouselScreen(
@@ -201,40 +221,83 @@ fun OnboardingCarouselScreen(
     onFinishOnboarding: () -> Unit,
     onNavigateToLogin: () -> Unit
 ) {
-    var currentPage by remember { mutableIntStateOf(initialPage.coerceIn(1, 3)) }
+    var currentPage by remember { mutableIntStateOf(initialPage.coerceIn(1, 4)) }
+
+    // System Back Button navigation: 4 -> 3 -> 2 -> 1
+    BackHandler(enabled = currentPage > 1) {
+        currentPage -= 1
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(PrepBackground)
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        Color(0xFF090E17),
+                        Color(0xFF0F172A),
+                        Color(0xFF131D31)
+                    )
+                )
+            )
     ) {
+        // Decorative background starry cosmos
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val starPositions = listOf(
+                Offset(size.width * 0.12f, size.height * 0.08f),
+                Offset(size.width * 0.35f, size.height * 0.12f),
+                Offset(size.width * 0.68f, size.height * 0.07f),
+                Offset(size.width * 0.88f, size.height * 0.14f),
+                Offset(size.width * 0.18f, size.height * 0.28f),
+                Offset(size.width * 0.82f, size.height * 0.32f),
+                Offset(size.width * 0.50f, size.height * 0.22f)
+            )
+            starPositions.forEachIndexed { idx, pos ->
+                drawCircle(
+                    color = Color.White.copy(alpha = if (idx % 2 == 0) 0.6f else 0.25f),
+                    radius = if (idx % 3 == 0) 2.0f else 1.2f,
+                    center = pos
+                )
+            }
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(top = 16.dp, bottom = 12.dp)
         ) {
-            // Top Bar with Skip Button
+            // TOP BAR NAVIGATION
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    PrepTrackBrandLogo(size = 32.dp)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "PREP TRACK",
-                        style = MaterialTheme.typography.titleSmall.copy(
-                            fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = 1.5.sp,
-                            fontSize = 13.sp
-                        ),
-                        color = Color.White
+                if (currentPage == 1) {
+                    // Screen 1: Brand Logo + PREP TRACK
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        PrepTrackBrandLogo(size = 32.dp)
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "PREP TRACK",
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                letterSpacing = 1.5.sp,
+                                fontSize = 14.sp
+                            ),
+                            color = Color.White
+                        )
+                    }
+                } else {
+                    // Screen 2, 3, 4: Global Back Arrow
+                    GlobalBackButton(
+                        onClick = { currentPage -= 1 },
+                        modifier = Modifier.testTag("onboarding_back_button")
                     )
                 }
 
+                // Top Right: Skip Button
                 TextButton(
                     onClick = onNavigateToLogin,
                     modifier = Modifier.testTag("onboarding_skip_button")
@@ -248,7 +311,7 @@ fun OnboardingCarouselScreen(
                 }
             }
 
-            // Main Illustration Area (Takes remaining top space)
+            // MAIN ILLUSTRATION AREA (Smooth Transition)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -256,31 +319,46 @@ fun OnboardingCarouselScreen(
                     .padding(horizontal = 20.dp),
                 contentAlignment = Alignment.Center
             ) {
-                when (currentPage) {
-                    1 -> OnboardingIllustrationOne()
-                    2 -> OnboardingIllustrationTwo()
-                    3 -> OnboardingIllustrationThree()
+                AnimatedContent(
+                    targetState = currentPage,
+                    transitionSpec = {
+                        if (targetState > initialState) {
+                            (slideInHorizontally { width -> width / 3 } + fadeIn()) togetherWith
+                                    (slideOutHorizontally { width -> -width / 3 } + fadeOut())
+                        } else {
+                            (slideInHorizontally { width -> -width / 3 } + fadeIn()) togetherWith
+                                    (slideOutHorizontally { width -> width / 3 } + fadeOut())
+                        }
+                    },
+                    label = "OnboardingIllustrationAnim"
+                ) { page ->
+                    when (page) {
+                        1 -> OnboardingIllustrationOne()
+                        2 -> OnboardingIllustrationTwo()
+                        3 -> OnboardingIllustrationThree()
+                        4 -> OnboardingIllustrationFour()
+                    }
                 }
             }
 
             // ==========================================
-            // HOVERING BOARD (FLOATING BOTTOM CARD)
+            // LARGE ROUNDED DARK CARD (IMAGE 2 DESIGN)
             // ==========================================
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .testTag("onboarding_hovering_board"),
-                shape = RoundedCornerShape(30.dp),
-                color = Color(0xF2121A2C), // Translucent dark navy
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                    .testTag("onboarding_card"),
+                shape = RoundedCornerShape(32.dp),
+                color = Color(0xF20F172A), // Deep navy surface
                 shadowElevation = 16.dp,
                 border = BorderStroke(
                     width = 1.2.dp,
                     brush = Brush.verticalGradient(
                         listOf(
-                            PrepCyanSecondary.copy(alpha = 0.5f),
-                            PrepBluePrimary.copy(alpha = 0.35f),
-                            Color(0xFF202C45)
+                            PrepCyanSecondary.copy(alpha = 0.45f),
+                            PrepBluePrimary.copy(alpha = 0.3f),
+                            Color(0xFF1E293B)
                         )
                     )
                 )
@@ -288,10 +366,10 @@ fun OnboardingCarouselScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 22.dp, vertical = 20.dp),
+                        .padding(horizontal = 24.dp, vertical = 22.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // 4-Dot Progress Indicator
+                    // Modern Page Indicator: Active = Elongated Blue Pill, Inactive = Muted Gray Circle
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.Center,
@@ -299,111 +377,116 @@ fun OnboardingCarouselScreen(
                     ) {
                         for (dot in 1..4) {
                             val isActive = dot == currentPage
+                            val targetWidth = if (isActive) 28.dp else 8.dp
+                            val width by animateDpAsState(
+                                targetValue = targetWidth,
+                                animationSpec = tween(durationMillis = 300),
+                                label = "dotWidth"
+                            )
+                            val color by animateColorAsState(
+                                targetValue = if (isActive) PrepBluePrimary else Color(0xFF334155),
+                                animationSpec = tween(durationMillis = 300),
+                                label = "dotColor"
+                            )
+
                             Box(
                                 modifier = Modifier
                                     .padding(horizontal = 4.dp)
-                                    .size(if (isActive) 22.dp else 7.dp, 7.dp)
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(if (isActive) PrepBluePrimary else Color.White.copy(alpha = 0.2f))
+                                    .size(width = width, height = 8.dp)
+                                    .clip(if (isActive) RoundedCornerShape(4.dp) else CircleShape)
+                                    .background(color)
                             )
                         }
                     }
 
                     Spacer(modifier = Modifier.height(18.dp))
 
-                    // Text Content (Title & Description)
-                    when (currentPage) {
-                        1 -> {
-                            OnboardingContent(
-                                title = "Track Your\nStudy Journey",
+                    // Text Content (Heading & Description)
+                    AnimatedContent(
+                        targetState = currentPage,
+                        transitionSpec = {
+                            if (targetState > initialState) {
+                                (slideInHorizontally { width -> width / 4 } + fadeIn()) togetherWith
+                                        (slideOutHorizontally { width -> -width / 4 } + fadeOut())
+                            } else {
+                                (slideInHorizontally { width -> -width / 4 } + fadeIn()) togetherWith
+                                        (slideOutHorizontally { width -> width / 4 } + fadeOut())
+                            }
+                        },
+                        label = "OnboardingTextAnim"
+                    ) { page ->
+                        when (page) {
+                            1 -> OnboardingContent(
+                                title = "Track Your Study Journey",
                                 subtitle = "Plan your syllabus, track lectures, notes & practice — all in one unified cockpit."
                             )
-                        }
-                        2 -> {
-                            OnboardingContent(
-                                title = "Smart Planning\nMade Easy",
-                                subtitle = "Fixed 2-hour lecture baseline calculation adapts daily to keep your exam target on track."
+                            2 -> OnboardingContent(
+                                title = "Plan Smarter",
+                                subtitle = "Turn your syllabus into a clear, manageable study plan."
                             )
-                        }
-                        3 -> {
-                            OnboardingContent(
-                                title = "Your Goal,\nOur Priority",
-                                subtitle = "Sign in securely with Google to sync your study streaks and progress across all devices."
+                            3 -> OnboardingContent(
+                                title = "Stay Focused",
+                                subtitle = "Use Focus Mode and Pomodoro sessions to make every study session count."
+                            )
+                            4 -> OnboardingContent(
+                                title = "Track Your Progress",
+                                subtitle = "See your lectures, practice, revision and study time come together in one place."
                             )
                         }
                     }
 
                     Spacer(modifier = Modifier.height(22.dp))
 
-                    // Primary Action Button (Next or Continue with Google)
-                    if (currentPage < 3) {
-                        Button(
-                            onClick = { currentPage += 1 },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(52.dp)
-                                .testTag("onboarding_primary_button"),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = PrepBluePrimary)
+                    // Primary Action Button
+                    Button(
+                        onClick = {
+                            if (currentPage < 4) {
+                                currentPage += 1
+                            } else {
+                                onFinishOnboarding()
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                            .testTag("onboarding_primary_button"),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = PrepBluePrimary)
+                    ) {
+                        Text(
+                            text = if (currentPage < 4) "Next" else "Get Started",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+
+                    // Secondary: "Already a member? Sign in" on Screen 1
+                    if (currentPage == 1) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Next",
-                                fontSize = 16.sp,
+                                text = "Already a member? ",
+                                color = Color(0xFF94A3B8),
+                                fontSize = 13.sp
+                            )
+                            Text(
+                                text = "Sign in",
+                                color = PrepCyanSecondary,
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                modifier = Modifier
+                                    .clickable(onClick = onNavigateToLogin)
+                                    .testTag("onboarding_to_login_button")
                             )
                         }
                     } else {
-                        // Page 3: Instant Sign in with Google / Get Started
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(52.dp)
-                                .clickable { onNavigateToLogin() }
-                                .testTag("onboarding_google_button"),
-                            shape = RoundedCornerShape(16.dp),
-                            color = Color.White,
-                            shadowElevation = 3.dp
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxSize(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                GoogleMultiColorGIcon(modifier = Modifier.size(22.dp))
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = "Continue with Google",
-                                    color = Color(0xFF1F2937),
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Direct Login / Navigation Row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = if (currentPage == 3) "Already have an account? " else "Already a member? ",
-                            color = Color.White.copy(alpha = 0.6f),
-                            fontSize = 12.5.sp
-                        )
-                        Text(
-                            text = "Sign in with Google",
-                            color = PrepCyanSecondary,
-                            fontSize = 12.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier
-                                .clickable(onClick = onNavigateToLogin)
-                                .testTag("onboarding_to_login_button")
-                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Box(modifier = Modifier.height(18.dp))
                     }
                 }
             }
@@ -508,19 +591,12 @@ fun LoginScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (onBack != null) {
-                    Surface(
-                        shape = CircleShape,
-                        color = Color(0xFF1E293B),
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clickable(onClick = onBack)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text("←", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
+                    GlobalBackButton(
+                        onClick = onBack,
+                        modifier = Modifier.testTag("login_back_button")
+                    )
                 } else {
-                    Spacer(modifier = Modifier.size(38.dp))
+                    Spacer(modifier = Modifier.size(44.dp))
                 }
 
                 Surface(
@@ -937,7 +1013,7 @@ fun PrepTrackBrandLogo(size: androidx.compose.ui.unit.Dp = 80.dp) {
     }
 }
 
-// 2. Onboarding 1 Artwork: Hiker facing mountain peaks & sunrise
+// 2. Onboarding 1 Artwork: Student, Study Goal, Planning, Progress, Achievement
 @Composable
 fun OnboardingIllustrationOne() {
     Box(
@@ -947,7 +1023,7 @@ fun OnboardingIllustrationOne() {
             .background(
                 Brush.radialGradient(
                     listOf(
-                        Color(0xFF1E3A8A).copy(alpha = 0.6f),
+                        Color(0xFF1E3A8A).copy(alpha = 0.5f),
                         Color(0xFF0F172A).copy(alpha = 0.2f),
                         Color.Transparent
                     )
@@ -959,233 +1035,485 @@ fun OnboardingIllustrationOne() {
             val w = size.width
             val h = size.height
 
-            // Rising Sun
+            // Ascending Learning Path (Roadmap)
+            val trajectoryPath = Path().apply {
+                moveTo(w * 0.15f, h * 0.85f)
+                cubicTo(
+                    w * 0.35f, h * 0.82f,
+                    w * 0.40f, h * 0.45f,
+                    w * 0.78f, h * 0.25f
+                )
+            }
+            // Glow track
+            drawPath(
+                path = trajectoryPath,
+                brush = Brush.linearGradient(
+                    listOf(PrepBlueDark, PrepCyanSecondary, Color.White)
+                ),
+                style = Stroke(width = 8f, cap = StrokeCap.Round)
+            )
+
+            // Milestone Dots along roadmap
+            drawCircle(Color(0xFF38BDF8), radius = 6f, center = Offset(w * 0.25f, h * 0.84f))
+            drawCircle(Color.White, radius = 3f, center = Offset(w * 0.25f, h * 0.84f))
+
+            drawCircle(Color(0xFF38BDF8), radius = 6f, center = Offset(w * 0.42f, h * 0.60f))
+            drawCircle(Color.White, radius = 3f, center = Offset(w * 0.42f, h * 0.60f))
+
+            drawCircle(Color(0xFF38BDF8), radius = 7f, center = Offset(w * 0.60f, h * 0.38f))
+            drawCircle(Color.White, radius = 3.5f, center = Offset(w * 0.60f, h * 0.38f))
+
+            // Peak Achievement Star / Milestone Flag at apex
+            val apexX = w * 0.78f
+            val apexY = h * 0.25f
             drawCircle(
                 brush = Brush.radialGradient(
                     listOf(Color(0xFFFDE047), Color(0xFFF59E0B), Color.Transparent),
-                    center = Offset(w * 0.5f, h * 0.35f),
-                    radius = w * 0.25f
+                    center = Offset(apexX, apexY),
+                    radius = 28f
                 ),
-                center = Offset(w * 0.5f, h * 0.35f),
-                radius = w * 0.25f
+                center = Offset(apexX, apexY),
+                radius = 28f
             )
-
-            // Mountain Peaks in Background
-            val bgMountain = Path().apply {
-                moveTo(0f, h * 0.8f)
-                lineTo(w * 0.3f, h * 0.38f)
-                lineTo(w * 0.55f, h * 0.65f)
-                lineTo(w * 0.8f, h * 0.32f)
-                lineTo(w, h * 0.75f)
-                lineTo(w, h)
-                lineTo(0f, h)
+            // Flagpole & Goal Flag
+            drawLine(Color.White, Offset(apexX, apexY), Offset(apexX, apexY - 24f), strokeWidth = 3f)
+            val flagPath = Path().apply {
+                moveTo(apexX, apexY - 24f)
+                lineTo(apexX + 22f, apexY - 17f)
+                lineTo(apexX, apexY - 10f)
                 close()
             }
-            drawPath(bgMountain, Color(0xFF1E293B))
+            drawPath(flagPath, Color(0xFFF59E0B))
 
-            // Snow on peaks
-            val snowPeakLeft = Path().apply {
-                moveTo(w * 0.24f, h * 0.47f)
-                lineTo(w * 0.3f, h * 0.38f)
-                lineTo(w * 0.36f, h * 0.47f)
-                close()
-            }
-            drawPath(snowPeakLeft, Color(0xFFE2E8F0))
-
-            val snowPeakRight = Path().apply {
-                moveTo(w * 0.73f, h * 0.42f)
-                lineTo(w * 0.8f, h * 0.32f)
-                lineTo(w * 0.87f, h * 0.42f)
-                close()
-            }
-            drawPath(snowPeakRight, Color(0xFFE2E8F0))
-
-            // Foreground Ridge
-            val fgRidge = Path().apply {
-                moveTo(0f, h * 0.88f)
-                lineTo(w * 0.5f, h * 0.7f)
-                lineTo(w, h * 0.9f)
-                lineTo(w, h)
-                lineTo(0f, h)
-                close()
-            }
-            drawPath(fgRidge, Color(0xFF0F172A))
-
-            // Student/Hiker Silhouette standing on Ridge
-            val hikerCenterX = w * 0.5f
-            val hikerBaseY = h * 0.7f
-            // Head
-            drawCircle(Color(0xFF38BDF8), radius = 7f, center = Offset(hikerCenterX, hikerBaseY - 42f))
-            // Body / Backpack
+            // Student Study Station at bottom
+            val deskX = w * 0.32f
+            val deskY = h * 0.80f
+            // Desk Surface
             drawRoundRect(
-                color = Color(0xFF0A84FF),
-                topLeft = Offset(hikerCenterX - 8f, hikerBaseY - 34f),
-                size = Size(16f, 22f),
+                color = Color(0xFF1E293B),
+                topLeft = Offset(deskX - 32f, deskY),
+                size = Size(64f, 8f),
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f, 4f)
             )
-            // Backpack bump
-            drawCircle(Color(0xFF0284C7), radius = 6f, center = Offset(hikerCenterX - 8f, hikerBaseY - 24f))
-            // Legs
-            drawLine(Color(0xFF0A84FF), Offset(hikerCenterX - 4f, hikerBaseY - 12f), Offset(hikerCenterX - 4f, hikerBaseY), strokeWidth = 3f)
-            drawLine(Color(0xFF0A84FF), Offset(hikerCenterX + 4f, hikerBaseY - 12f), Offset(hikerCenterX + 4f, hikerBaseY), strokeWidth = 3f)
+            // Glowing Laptop screen
+            val laptopPath = Path().apply {
+                moveTo(deskX - 16f, deskY)
+                lineTo(deskX - 12f, deskY - 22f)
+                lineTo(deskX + 12f, deskY - 22f)
+                lineTo(deskX + 16f, deskY)
+                close()
+            }
+            drawPath(laptopPath, Brush.verticalGradient(listOf(Color(0xFF38BDF8), Color(0xFF0284C7))))
+
+            // Student Silhouette
+            drawCircle(Color.White, radius = 9f, center = Offset(deskX - 28f, deskY - 26f))
+            drawRoundRect(
+                color = Color(0xFF0A84FF),
+                topLeft = Offset(deskX - 38f, deskY - 15f),
+                size = Size(20f, 15f),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(5f, 5f)
+            )
+        }
+
+        // Floating Badges
+        // Top Left Goal Badge
+        Surface(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(top = 16.dp, start = 8.dp),
+            shape = RoundedCornerShape(12.dp),
+            color = Color(0xF2121A2C),
+            border = BorderStroke(1.dp, PrepCyanSecondary.copy(alpha = 0.5f))
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("🎯", fontSize = 12.sp)
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Target Exam", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+
+        // Bottom Right Achievement Badge
+        Surface(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(bottom = 20.dp, end = 12.dp),
+            shape = RoundedCornerShape(12.dp),
+            color = Color(0xF2121A2C),
+            border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.6f))
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("⚡️", fontSize = 12.sp)
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Syllabus Ready", color = Color(0xFF10B981), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }
 
-// 3. Onboarding 2 Artwork: Floating Phone with study widgets
+// 3. Onboarding 2 Artwork: Syllabus, Calendar, Checklist, Study Planning
 @Composable
 fun OnboardingIllustrationTwo() {
     Box(
         modifier = Modifier.size(240.dp),
         contentAlignment = Alignment.Center
     ) {
-        // Floating Phone mockup in Center
+        // Central Planner & Checklist Card
         Card(
-            modifier = Modifier
-                .size(130.dp, 190.dp),
-            shape = RoundedCornerShape(22.dp),
-            colors = CardDefaults.cardColors(containerColor = PrepSurface),
-            border = androidx.compose.foundation.BorderStroke(2.dp, PrepBluePrimary)
+            modifier = Modifier.size(190.dp, 190.dp),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF121B2D)),
+            border = BorderStroke(1.5.dp, Brush.linearGradient(listOf(PrepCyanSecondary, PrepBluePrimary)))
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(10.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceAround
+                    .padding(14.dp),
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Top Notch
-                Box(
-                    modifier = Modifier
-                        .size(36.dp, 4.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(Color.White.copy(alpha = 0.3f))
-                )
-                // Mini Graph / Progress
-                Box(
-                    modifier = Modifier
-                        .size(46.dp)
-                        .clip(CircleShape)
-                        .background(PrepBlueLight),
-                    contentAlignment = Alignment.Center
+                // Calendar Timetable Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = null,
-                        tint = PrepCyanSecondary,
-                        modifier = Modifier.size(24.dp)
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.CalendarMonth,
+                            contentDescription = null,
+                            tint = PrepCyanSecondary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "SMART PLANNER",
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
+                        )
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = PrepBluePrimary.copy(alpha = 0.2f)
+                    ) {
+                        Text(
+                            text = "2h/day",
+                            color = PrepCyanSecondary,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
                 }
-                // Mini lines
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Box(modifier = Modifier.size(80.dp, 5.dp).clip(RoundedCornerShape(2.dp)).background(Color.White.copy(alpha = 0.4f)))
-                    Box(modifier = Modifier.size(50.dp, 5.dp).clip(RoundedCornerShape(2.dp)).background(PrepCyanSecondary))
+
+                // Days of week row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    listOf("M", "T", "W", "T", "F", "S").forEachIndexed { i, day ->
+                        val isDone = i < 4
+                        Surface(
+                            shape = CircleShape,
+                            color = if (isDone) PrepBluePrimary else Color(0xFF1E293B),
+                            modifier = Modifier.size(20.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = day,
+                                    fontSize = 9.sp,
+                                    color = if (isDone) Color.White else Color(0xFF94A3B8),
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+
+                HorizontalDivider(color = Color(0xFF1E293B), thickness = 1.dp)
+
+                // Syllabus Task Checklist items
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    // Task 1
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF10B981), modifier = Modifier.size(15.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Physics • Kinematics", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                    }
+                    // Task 2
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF10B981), modifier = Modifier.size(15.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Chemistry • Atomic Structure", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                    }
+                    // Task 3
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            shape = CircleShape,
+                            border = BorderStroke(1.5.dp, PrepCyanSecondary),
+                            color = Color.Transparent,
+                            modifier = Modifier.size(14.dp)
+                        ) {}
+                        Spacer(modifier = Modifier.width(7.dp))
+                        Text("Maths • Calculus Practice", color = Color(0xFFCBD5E1), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                    }
                 }
             }
         }
 
-        // Floating Badges around phone
-        // Top Left: Calendar
-        Card(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .size(44.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = PrepBlueLight),
-            border = androidx.compose.foundation.BorderStroke(1.dp, PrepCyanSecondary.copy(alpha = 0.6f))
-        ) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Icon(imageVector = Icons.Default.CalendarMonth, contentDescription = null, tint = PrepCyanSecondary, modifier = Modifier.size(22.dp))
-            }
-        }
-
-        // Top Right: Video Play
-        Card(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .size(44.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = PrepBlueLight),
-            border = androidx.compose.foundation.BorderStroke(1.dp, PrepBluePrimary.copy(alpha = 0.6f))
-        ) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, tint = PrepBluePrimary, modifier = Modifier.size(24.dp))
-            }
-        }
-
-        // Bottom Right: Checkmark
-        Card(
+        // Floating Tag
+        Surface(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .size(44.dp),
+                .padding(bottom = 4.dp, end = 2.dp),
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF132F24)),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF10B981))
+            color = Color(0xFF0F172A),
+            border = BorderStroke(1.dp, PrepCyanSecondary.copy(alpha = 0.5f))
         ) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF10B981), modifier = Modifier.size(22.dp))
+            Row(
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("📋", fontSize = 11.sp)
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Syllabus Linked", color = Color.White, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
 }
 
-// 4. Onboarding 3 Artwork: Glowing Target Bullseye
+// 4. Onboarding 3 Artwork: Timer, Focus Session, Progress Ring, Distraction Control
 @Composable
 fun OnboardingIllustrationThree() {
     Box(
         modifier = Modifier.size(240.dp),
         contentAlignment = Alignment.Center
     ) {
-        Canvas(modifier = Modifier.size(200.dp)) {
+        Canvas(modifier = Modifier.size(210.dp)) {
             val center = Offset(size.width / 2, size.height / 2)
-            val maxR = size.width / 2
+            val r = size.width / 2
 
-            // Glowing Outer Ring
+            // Concentric ambient glow
             drawCircle(
-                color = PrepBluePrimary.copy(alpha = 0.15f),
-                radius = maxR,
+                color = PrepBluePrimary.copy(alpha = 0.12f),
+                radius = r * 0.95f,
                 center = center
             )
-            // Outer Ring
+
+            // Outer Track Ring
             drawCircle(
-                color = PrepCyanSecondary,
-                radius = maxR * 0.85f,
+                color = Color(0xFF1E293B),
+                radius = r * 0.78f,
                 center = center,
-                style = Stroke(width = 8f)
+                style = Stroke(width = 12f)
             )
-            // Middle Ring
-            drawCircle(
-                color = PrepBluePrimary,
-                radius = maxR * 0.58f,
-                center = center,
-                style = Stroke(width = 9f)
+
+            // Animated Cyan-Blue Focus Progress Arc (~75% completed)
+            drawArc(
+                brush = Brush.sweepGradient(
+                    listOf(PrepBluePrimary, PrepCyanSecondary, Color.White, PrepCyanSecondary)
+                ),
+                startAngle = -90f,
+                sweepAngle = 260f,
+                useCenter = false,
+                style = Stroke(width = 12f, cap = StrokeCap.Round)
             )
+
             // Inner Ring
             drawCircle(
-                color = Color.White,
-                radius = maxR * 0.32f,
-                center = center,
-                style = Stroke(width = 8f)
-            )
-            // Center Bullseye
-            drawCircle(
-                color = PrepCyanSecondary,
-                radius = maxR * 0.16f,
+                color = Color(0xFF0F172A),
+                radius = r * 0.65f,
                 center = center
             )
+        }
 
-            // Arrow striking Center
-            val arrowLength = maxR * 0.7f
-            val startArrow = Offset(center.x + arrowLength * 0.7f, center.y - arrowLength * 0.7f)
-            drawLine(
-                brush = Brush.linearGradient(listOf(Color.White, PrepCyanSecondary)),
-                start = startArrow,
-                end = center,
-                strokeWidth = 6f
+        // Digital Focus Display in Center
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = PrepBluePrimary.copy(alpha = 0.2f),
+                border = BorderStroke(1.dp, PrepCyanSecondary.copy(alpha = 0.4f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("⏱", fontSize = 10.sp)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("POMODORO", color = PrepCyanSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = "25:00",
+                fontSize = 32.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color.White,
+                letterSpacing = 1.sp
             )
-            // Arrow Feathers
-            drawLine(Color.White, startArrow, Offset(startArrow.x - 12f, startArrow.y - 12f), strokeWidth = 4f)
-            drawLine(Color.White, startArrow, Offset(startArrow.x + 12f, startArrow.y + 12f), strokeWidth = 4f)
+
+            Text(
+                text = "Deep Focus Active",
+                fontSize = 11.sp,
+                color = Color(0xFF94A3B8),
+                fontWeight = FontWeight.Medium
+            )
+        }
+
+        // Floating Distraction Shield Badge at Bottom Right
+        Surface(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 10.dp, bottom = 12.dp),
+            shape = RoundedCornerShape(14.dp),
+            color = Color(0xF2121A2C),
+            border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.6f))
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Lock,
+                    contentDescription = null,
+                    tint = Color(0xFF10B981),
+                    modifier = Modifier.size(13.dp)
+                )
+                Spacer(modifier = Modifier.width(5.dp))
+                Text("Zero Distraction", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+// 5. Onboarding 4 Artwork: Progress Graph, Completed Tasks, Study Streak, Statistics
+@Composable
+fun OnboardingIllustrationFour() {
+    Box(
+        modifier = Modifier.size(240.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        // Analytics Card
+        Card(
+            modifier = Modifier.size(200.dp, 190.dp),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF121B2D)),
+            border = BorderStroke(1.5.dp, Brush.linearGradient(listOf(PrepCyanSecondary, PrepBluePrimary)))
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(14.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Header with Streak
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "GROWTH ANALYTICS",
+                        color = Color.White,
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFFFF6D00).copy(alpha = 0.18f),
+                        border = BorderStroke(1.dp, Color(0xFFFF6D00).copy(alpha = 0.5f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("🔥", fontSize = 11.sp)
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text("7d Streak", color = Color(0xFFFF9E40), fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                // Bar Chart with Ascending Growth
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(80.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    val barHeights = listOf(0.35f, 0.45f, 0.60f, 0.55f, 0.78f, 0.90f, 1.0f)
+                    val days = listOf("M", "T", "W", "T", "F", "S", "S")
+
+                    barHeights.forEachIndexed { idx, frac ->
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Bottom
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(width = 16.dp, height = (60 * frac).dp)
+                                    .clip(RoundedCornerShape(topStart = 5.dp, topEnd = 5.dp))
+                                    .background(
+                                        Brush.verticalGradient(
+                                            if (idx >= 5) listOf(Color.White, PrepCyanSecondary)
+                                            else listOf(PrepCyanSecondary, PrepBluePrimary)
+                                        )
+                                    )
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = days[idx],
+                                fontSize = 9.sp,
+                                color = if (idx >= 5) PrepCyanSecondary else Color(0xFF94A3B8),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+
+                // Completion status banner
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = Color(0xFF0F172A),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Syllabus Mastery", color = Color(0xFF94A3B8), fontSize = 10.5.sp)
+                        Text("84% Done", color = Color(0xFF10B981), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+
+        // Floating Target Pin
+        Surface(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 4.dp, end = 4.dp),
+            shape = CircleShape,
+            color = PrepBluePrimary,
+            border = BorderStroke(1.5.dp, Color.White)
+        ) {
+            Box(modifier = Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+                Text("📈", fontSize = 12.sp)
+            }
         }
     }
 }

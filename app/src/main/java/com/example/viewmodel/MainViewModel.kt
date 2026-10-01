@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -183,8 +184,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _screenHistory = mutableListOf<AppScreen>()
 
     fun navigateTo(screen: AppScreen) {
-        _screenHistory.add(_currentScreen.value)
-        _currentScreen.value = screen
+        if (_currentScreen.value != screen) {
+            if (_screenHistory.lastOrNull() != _currentScreen.value) {
+                _screenHistory.add(_currentScreen.value)
+            }
+            if (_screenHistory.size > 25) {
+                _screenHistory.removeAt(0)
+            }
+            _currentScreen.value = screen
+        }
     }
 
     fun navigateBack(): Boolean {
@@ -679,7 +687,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     init {
         // Observe active goal to load its specific subjects, chapters, lectures, and plan
         viewModelScope.launch {
-            activeGoal.collect { goal ->
+            activeGoal.collectLatest { goal ->
                 if (goal != null) {
                     launch { repository.getSubjectsForExam(goal.id).collect { _subjects.value = it } }
                     launch { repository.getAllChaptersForExam(goal.id).collect { _chapters.value = it } }
@@ -693,11 +701,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     }
                 } else {
-                    if (!authPrefs.getBoolean("is_logged_in", false)) {
-                        _currentScreen.value = AppScreen.Splash
-                    } else {
+                    if (authPrefs.getBoolean("is_logged_in", false)) {
                         val syncGoal = repository.getActiveGoalSync()
-                        if (syncGoal == null) {
+                        if (syncGoal == null && _currentScreen.value is AppScreen.Dashboard) {
                             _currentScreen.value = AppScreen.OnboardingSelectGoal
                         }
                     }

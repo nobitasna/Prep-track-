@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.local.entity.LectureEntity
+import com.example.ui.components.GlobalBackButton
 import com.example.ui.theme.PrepBlueLight
 import com.example.ui.theme.PrepBluePrimary
 import com.example.ui.theme.PrepSuccess
@@ -101,10 +102,10 @@ fun ChapterDetailScreen(
                 )
             },
             navigationIcon = {
-                IconButton(onClick = onBack, modifier = Modifier.testTag("chapter_detail_back_button")) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back"
+                Box(modifier = Modifier.padding(start = 12.dp, end = 4.dp)) {
+                    GlobalBackButton(
+                        onClick = onBack,
+                        modifier = Modifier.testTag("chapter_detail_back_button")
                     )
                 }
             },

@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import com.example.ui.components.GlobalBackButton
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Info
@@ -129,10 +130,10 @@ fun SettingsScreen(
                 )
             },
             navigationIcon = {
-                IconButton(onClick = onBack, modifier = Modifier.testTag("settings_back_button")) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back"
+                Box(modifier = Modifier.padding(start = 12.dp, end = 4.dp)) {
+                    GlobalBackButton(
+                        onClick = onBack,
+                        modifier = Modifier.testTag("settings_back_button")
                     )
                 }
             },

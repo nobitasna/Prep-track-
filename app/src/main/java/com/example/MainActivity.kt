@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -65,15 +66,17 @@ fun PrepTrackApp(viewModel: MainViewModel = viewModel()) {
     val authError by viewModel.authError.collectAsStateWithLifecycle()
 
     // Back button handling for all sub-screens
-    BackHandler(enabled = currentScreen !is AppScreen.Dashboard && currentScreen !is AppScreen.Splash && currentScreen !is AppScreen.Login) {
-        when (currentScreen) {
-            is AppScreen.ChapterDetail -> viewModel.navigateTo(AppScreen.Syllabus)
-            is AppScreen.Settings -> viewModel.navigateBack()
-            is AppScreen.SubscriptionSelection -> viewModel.navigateTo(AppScreen.Login)
-            is AppScreen.OnboardingSelectGoal -> viewModel.navigateTo(AppScreen.Dashboard)
-            is AppScreen.Onboarding -> viewModel.navigateTo(AppScreen.Splash)
-            is AppScreen.Login -> viewModel.navigateTo(AppScreen.Onboarding)
-            else -> viewModel.navigateTo(AppScreen.Dashboard)
+    BackHandler(enabled = currentScreen !is AppScreen.Dashboard && currentScreen !is AppScreen.Splash) {
+        if (!viewModel.navigateBack()) {
+            when (currentScreen) {
+                is AppScreen.ChapterDetail -> viewModel.navigateTo(AppScreen.Syllabus)
+                is AppScreen.Settings -> viewModel.navigateTo(AppScreen.Dashboard)
+                is AppScreen.SubscriptionSelection -> viewModel.navigateTo(AppScreen.Login)
+                is AppScreen.OnboardingSelectGoal -> viewModel.navigateTo(AppScreen.Dashboard)
+                is AppScreen.Onboarding -> viewModel.navigateTo(AppScreen.Splash)
+                is AppScreen.Login -> viewModel.navigateTo(AppScreen.Onboarding)
+                else -> viewModel.navigateTo(AppScreen.Dashboard)
+            }
         }
     }
 
@@ -90,6 +93,7 @@ fun PrepTrackApp(viewModel: MainViewModel = viewModel()) {
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             if (showTopBar) {
                 val title = when (currentScreen) {
@@ -187,7 +191,7 @@ fun PrepTrackApp(viewModel: MainViewModel = viewModel()) {
                             }
                         }
                     },
-                    onBack = { viewModel.navigateTo(AppScreen.Onboarding) }
+                    onBack = { if (!viewModel.navigateBack()) viewModel.navigateTo(AppScreen.Onboarding) }
                 )
             }
             is AppScreen.SubscriptionSelection -> {
@@ -200,7 +204,7 @@ fun PrepTrackApp(viewModel: MainViewModel = viewModel()) {
                         if (activeGoal != null) viewModel.navigateTo(AppScreen.Dashboard)
                         else viewModel.navigateTo(AppScreen.OnboardingSelectGoal)
                     },
-                    onBackToLogin = { viewModel.navigateTo(AppScreen.Login) }
+                    onBackToLogin = { if (!viewModel.navigateBack()) viewModel.navigateTo(AppScreen.Login) }
                 )
             }
             is AppScreen.OnboardingWelcome -> {
@@ -211,6 +215,7 @@ fun PrepTrackApp(viewModel: MainViewModel = viewModel()) {
             is AppScreen.OnboardingSelectGoal -> {
                 OnboardingSelectGoalScreen(
                     viewModel = viewModel,
+                    onBack = { if (!viewModel.navigateBack()) viewModel.navigateTo(AppScreen.Dashboard) },
                     onComplete = { viewModel.navigateTo(AppScreen.Dashboard) }
                 )
             }
@@ -227,7 +232,7 @@ fun PrepTrackApp(viewModel: MainViewModel = viewModel()) {
                 ChapterDetailScreen(
                     chapterId = screen.chapterId,
                     viewModel = viewModel,
-                    onBack = { viewModel.navigateTo(AppScreen.Syllabus) }
+                    onBack = { if (!viewModel.navigateBack()) viewModel.navigateTo(AppScreen.Syllabus) }
                 )
             }
             is AppScreen.Focus -> {
@@ -239,7 +244,7 @@ fun PrepTrackApp(viewModel: MainViewModel = viewModel()) {
             is AppScreen.Settings -> {
                 SettingsScreen(
                     viewModel = viewModel,
-                    onBack = { viewModel.navigateBack() }
+                    onBack = { if (!viewModel.navigateBack()) viewModel.navigateTo(AppScreen.Dashboard) }
                 )
             }
         }

@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import com.example.ui.components.GlobalBackButton
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DateRange
@@ -73,6 +74,7 @@ import java.util.Locale
 
 @Composable
 fun OnboardingWelcomeScreen(
+    onBack: (() -> Unit)? = null,
     onGetStarted: () -> Unit
 ) {
     Box(
@@ -81,6 +83,15 @@ fun OnboardingWelcomeScreen(
             .background(MaterialTheme.colorScheme.background)
             .padding(24.dp)
     ) {
+        if (onBack != null) {
+            GlobalBackButton(
+                onClick = onBack,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(top = 8.dp)
+            )
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -192,6 +203,7 @@ fun OnboardingWelcomeScreen(
 @Composable
 fun OnboardingSelectGoalScreen(
     viewModel: MainViewModel,
+    onBack: (() -> Unit)? = null,
     onComplete: () -> Unit
 ) {
     var selectedCategory by remember { mutableStateOf("Medical") }
@@ -244,9 +256,17 @@ fun OnboardingSelectGoalScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 18.dp),
-        contentPadding = PaddingValues(top = 28.dp, bottom = 48.dp)
+        contentPadding = PaddingValues(top = 20.dp, bottom = 48.dp)
     ) {
         item {
+            if (onBack != null) {
+                Box(modifier = Modifier.padding(bottom = 16.dp)) {
+                    GlobalBackButton(
+                        onClick = onBack,
+                        modifier = Modifier.testTag("goal_selection_back_button")
+                    )
+                }
+            }
             Text(
                 text = "Select Your Target Goal",
                 style = MaterialTheme.typography.headlineMedium.copy(
